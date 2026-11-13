@@ -27,7 +27,7 @@ Implemented controls:
 
 Budget limitations are explicit: serialized UTF-8 bytes are a conservative estimate for visible request input, not the exact model tokenizer. Hidden provider/tool framing is not observable. Provider usage can exceed the estimate; the run then stops after the response and is marked incomplete. A request already in flight may exceed the wall-clock target. USD budget is fail-closed/disabled until a dated price schedule and estimator exist; unknown cost is null, never zero.
 
-GitHub Actions run 43438587507 passed on exact HEAD 6e9cbb8f0023f5234ddffcc7c8738e5cf1fa1731: isolated installation from uv.lock succeeded, all 58 pytest tests passed, all 10 offline security smoke checks passed, and the three shared JSON Schemas parsed successfully. The run made no live API calls. This validates the current branch head at that checkpoint; subsequent documentation-only commits must still retain green CI.
+GitHub Actions run 43438761461 passed on exact HEAD 7c25f6d0701e1d7c2c91a65309440704b40ac199: isolated installation from uv.lock succeeded, all 58 pytest tests passed, all 10 offline security smoke checks passed, and the three shared JSON Schemas parsed successfully. The run made no live API calls. Subsequent changes are documentation-only; re-check CI for a later branch head before merging.
 
 No real API call has been made. The local .env with RAVE_API_KEY is absent; no key was requested in chat or read, and no paid API call was made. Once the user has configured the key locally, one small explicitly capped integration probe is still required.
 
@@ -43,7 +43,7 @@ No external candidate has been installed or executed. No fork has been created. 
 
 ## Current branch and repository state
 
-- Current work: branch sami-token-guard-searchclaw-audit.
+- Current work: branch sami-token-guard-searchclaw-audit; last fully validated HEAD: 7c25f6d0701e1d7c2c91a65309440704b40ac199.
 - Draft PR #1 remains unmerged and is superseded by the current continuation branch; do not merge PR #1. The current branch is the authoritative review snapshot.
 - Main remains unchanged.
 - RAVE main repository remains unchanged.
