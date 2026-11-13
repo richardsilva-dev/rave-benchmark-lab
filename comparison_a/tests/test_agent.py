@@ -137,3 +137,70 @@ def test_provider_and_model_sources_are_normalized_and_distinguished(monkeypatch
     assert result.sources[1]["provenance"] == "model_reported"
     assert meta.sources_count == 1
     assert meta.model_reported_sources_count == 1
+
+
+def test_model_reported_urls_cannot_make_run_completed_without_provider_annotations(monkeypatch):
+    agent = SoloResearchAgent(
+        Settings("not-used"),
+        BudgetController(Limits(1000, 1, 30, None)),
+    )
+
+    class Search:
+        def __init__(self, *args):
+            pass
+
+        def search(self, *args):
+            return {"content": "evidence", "citations": []}
+
+    monkeypatch.setattr("solo_baseline.agent.OpenAIHostedSearch", Search)
+    monkeypatch.setattr(
+        agent,
+        "_analysis",
+        lambda *args: {
+            "answer": "Potential answer",
+            "gaps": [],
+            "limitations": [],
+            "sources": [{"url": "https://example.org/article", "title": "Model claimed"}],
+        },
+    )
+
+    result, meta = agent.run({"request_id": "req-no-annotations", "question": "Q", "scope": ""})
+
+    assert result.status == "PARTIAL"
+    assert meta.status == "PARTIAL"
+    assert result.sources[0]["provenance"] == "model_reported"
+    assert meta.sources_count == 0
+    assert meta.model_reported_sources_count == 1
+    assert any("No structured provider-returned citations" in item for item in result.limitations)
+
+
+def test_malformed_provider_citation_container_is_rejected_and_run_partial(monkeypatch):
+    agent = SoloResearchAgent(
+        Settings("not-used"),
+        BudgetController(Limits(1000, 1, 30, None)),
+    )
+
+    class Search:
+        def __init__(self, *args):
+            pass
+
+        def search(self, *args):
+            return {"content": "evidence", "citations": "not-a-list"}
+
+    monkeypatch.setattr("solo_baseline.agent.OpenAIHostedSearch", Search)
+    monkeypatch.setattr(
+        agent,
+        "_analysis",
+        lambda *args: {
+            "answer": "Potential answer",
+            "gaps": [],
+            "limitations": [],
+            "sources": [],
+        },
+    )
+
+    result, meta = agent.run({"request_id": "req-malformed-citations", "question": "Q", "scope": ""})
+
+    assert result.status == "PARTIAL"
+    assert meta.rejected_sources_count == 1
+    assert meta.sources_count == 0
