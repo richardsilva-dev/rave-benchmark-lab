@@ -237,3 +237,16 @@ def test_usage_fields_must_be_non_boolean_integers():
             with pytest.raises(RuntimeError, match="usage metadata"):
                 post_chat_completion(settings, budget, telemetry, "analysis", payload)
         assert budget.unknown_usage_tokens > 0
+
+
+def test_client_rejects_model_drift_before_network_call():
+    settings, budget, telemetry, payload = setup_client()
+    payload["model"] = "gpt-4.1"
+
+    with patch("solo_baseline.http_client.urllib.request.urlopen") as call:
+        with pytest.raises(ValueError, match="frozen comparison configuration"):
+            post_chat_completion(settings, budget, telemetry, "analysis", payload)
+
+    call.assert_not_called()
+    assert budget.calls == 0
+    assert telemetry.calls == []
