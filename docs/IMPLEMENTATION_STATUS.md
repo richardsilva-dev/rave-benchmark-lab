@@ -29,21 +29,24 @@ Budget limitations are explicit: serialized UTF-8 bytes are a conservative estim
 
 GitHub Actions run 43438761461 passed on exact HEAD 7c25f6d0701e1d7c2c91a65309440704b40ac199: isolated installation from uv.lock succeeded, all 58 pytest tests passed, all 10 offline security smoke checks passed, and the three shared JSON Schemas parsed successfully. The run made no live API calls. Subsequent changes are documentation-only; re-check CI for a later branch head before merging.
 
-No real API call has been made. The local .env with RAVE_API_KEY is absent; no key was requested in chat or read, and no paid API call was made. Once the user has configured the key locally, one small explicitly capped integration probe is still required.
+The user reports that comparison_a/.env and RAVE_API_KEY are now configured on their local machine. The local filesystem is not accessible through the GitHub connection, so the secret was neither read nor transmitted. No live API call has been made. A single explicitly capped local integration probe is still required; the user can run it locally without sharing the key.
 
-## Comparison B — Open Deep Research blocked; Local Deep Research under review
+## Comparison B — Open Deep Research blocked; Local Deep Research forked and hardening
 
 Open Deep Research remains pinned as a submodule at 1b7d2e80db9faa586165c60e09096dbbfd483a64 (MIT). Its frozen lock audit reported 89 advisories across 242 packages and adverse archived-package statuses for two dependencies. No severity scores were present in that audit output. Its supervisor/subagent architecture is also not a clean solo baseline. It was not installed or executed.
 
 SearchClaw is not selected: the inspected upstream lacked a Python lockfile and had fail-open DNS error handling plus automatic redirects without hop-by-hop revalidation. Its optional Jina, browser/CDP, skills and persistent-memory features would need to be removed or disabled, and its search provider differs from RAVE.
 
-Local Deep Research (LDR) is the preferred next candidate for a hardened B review because it has a PDM lockfile, dedicated SSRF/egress controls and tests, and a supported include_sub_research=false mode. It is not approved yet: the upstream explicitly records an unresolved unstructured URL-partitioning SSRF advisory and the LLM SDK endpoint path retains a DNS resolve/connect limitation. Its search provider is not the same hosted gpt-5-search-api route. See docs/EXTERNAL_REFERENCE_REVIEW.md.
+Local Deep Research (LDR) fork confirmed at https://github.com/richardsilva-dev/local-deep-research. Its main branch currently matches upstream commit 8717d257c234d23a687b8c66c4e5174b4d7e2ea7. A separate branch, rave-benchmark-hardened-solo, now contains an explicit process-level override that forces include_sub_research=false, tests for the override, and a benchmark security profile. Draft PR #1 is open: https://github.com/richardsilva-dev/local-deep-research/pull/1. No merge has occurred. The code change has not yet been run through CI; the PR remains draft.
 
-No external candidate has been installed or executed. No fork has been created. The available GitHub actions can edit and inspect repository branches but do not expose a GitHub repository-fork operation. If we proceed with LDR, the user must create the fork through GitHub first; we can then work against that repository and pin a reviewed commit.
+The upstream source documents a critical SSRF in unstructured's URL-taking APIs, but also maintains a static test contract that production code never passes URLs to those APIs (only local file paths). The benchmark profile forbids document uploads/URL partitioning. The LLM SDK's DNS re-resolution limitation remains; an OS/container firewall or strict egress proxy is mandatory. The LDR search provider is not yet shown to match gpt-5-search-api. See docs/EXTERNAL_REFERENCE_REVIEW.md.
+
+No external candidate has been installed or executed. No real API request has been made.
 
 ## Current branch and repository state
 
-- Current work: branch sami-token-guard-searchclaw-audit; last fully validated HEAD: 7c25f6d0701e1d7c2c91a65309440704b40ac199.
+- Current work in the lab: branch sami-token-guard-searchclaw-audit; last fully validated CI checkpoint: 7c25f6d0701e1d7c2c91a65309440704b40ac199. The latest documentation commit is newer and should have CI rechecked before merge.
+- Comparison B fork branch: https://github.com/richardsilva-dev/local-deep-research/tree/rave-benchmark-hardened-solo; draft PR #1 is open and unmerged.
 - Draft PR #1 remains unmerged and is superseded by the current continuation branch; do not merge PR #1. The current branch is the authoritative review snapshot.
 - Main remains unchanged.
 - RAVE main repository remains unchanged.
@@ -51,8 +54,8 @@ No external candidate has been installed or executed. No fork has been created. 
 
 ## User intervention required
 
-1. Configure comparison_a/.env locally from comparison_a/.env.example and set RAVE_API_KEY. Do not paste or send the key in chat. Once configured, tell us only that the key is ready; the first live call will be a single, explicitly capped installation probe, not benchmark data.
-2. If proceeding with LDR as Comparison B, create a GitHub fork of LearningCircuit/local-deep-research under the user's account and share the fork URL. No fork will be simulated or claimed before it exists.
+1. Comparison A key is reported configured locally. Run the capped local smoke probe when instructed; do not paste or send the key in chat. The assistant cannot access the local filesystem or inspect that .env through GitHub.
+2. Comparison B still requires an exact search-provider choice/key if the selected LDR search integration needs one, and approval of the OS/container egress boundary. Do not provide API secrets in chat.
 
 ## Stop point before the definitive benchmark protocol
 
