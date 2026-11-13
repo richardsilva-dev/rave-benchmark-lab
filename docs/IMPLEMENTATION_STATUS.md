@@ -106,3 +106,13 @@ Interpretation limits:
 - The answer itself must be scored against source documents by blind evaluators; citation presence and model-assigned support labels are not independent fact verification.
 
 This report does not authorize the definitive benchmark protocol or official question set. The user must be notified before that phase begins.
+
+
+## Follow-up hardening status — 2026-11-13
+
+- Comparison A: the current branch head `6d01a47d8dbf8da7d0c39f05aba5d5b7e9213888` passed GitHub Actions run `43458297674`. This run validates the repository's offline tests/security smoke checks/schema parsing, not a live API call. The user's real RAVE run report is recorded above as calibration evidence only.
+- Comparison B LDR fork: a follow-up branch `rave-benchmark-final-hardening` and draft PR #2 were created. The lead LangGraph strategy now fails closed if the effective toolset includes `research_subtopic` in solo mode; its system prompt and strict-egress guidance are aligned with solo mode; focused regression tests and a dedicated CI/dependency-audit workflow were added. Earlier draft PR #1 was closed as superseded by PR #2.
+- LDR's known `unstructured 0.18.x` advisory is not resolved. The branch's dependency-audit job is a release gate and must not be bypassed. Comprehensive upload/document-ingestion disablement and tested OS/container egress isolation are also still outstanding. LDR remains unapproved for installation/live execution.
+- No paid API call was made from CI. No API key was read or transmitted. No official benchmark question set or scoring protocol has been created.
+
+**Release status:** A is ready only for a user-run, capped integration probe. B is blocked. The official benchmark is not yet ready.
