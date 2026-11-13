@@ -9,7 +9,7 @@ Updated 2026-11-13. Private repository: https://github.com/richardsilva-dev/rave
 - A global model-call-attempt limit is now supported and counts retries and JSON repair calls.
 - CLI requires explicit token, search, wall-time, cost and model-call limits; maximum allowed local run-cost argument is USD 0.50.
 - GPT-4.1-mini rates and Web Search fee are configured from the official OpenAI pricing page. GPT-5 Search API has no distinct token-rate row on that page, so live execution requires explicit local input/output rates; unknown rates fail closed.
-- Suggested first pilot limits: 40,000 tokens, 3 search attempts, 5 model-call attempts, 180 seconds and USD 0.50 estimated cost.
+- Suggested first pilot limits: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated cost.
 - Metadata records configured limits, pricing version/rates, reserved search context and estimated cost.
 
 ## Important limitations
