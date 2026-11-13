@@ -6,7 +6,7 @@ Laboratório para preparar uma comparação controlada entre o RAVE/Hive, um age
 
 RAVE permanece congelado em richardsilva-dev/project_RAVE, branch independent_research, commit d5a7b2397bc50796ab83ee22ed326fdc087b84b2. O repositório RAVE não foi modificado.
 
-A Comparação A está implementada como agente sequencial e está sendo endurecida em sami-token-guard-searchclaw-audit: reserva prévia de tokens por tentativa, orçamento separado para pesquisas lógicas e chamadas HTTP, retries limitados, validação de saída, deduplicação de URLs, proveniência das citações e modelos fixos. A validação do CI do HEAD mais recente ainda precisa ser confirmada.
+A Comparação A está implementada como agente sequencial e foi endurecida na branch sami-token-guard-searchclaw-audit: reserva prévia de tokens por tentativa, orçamento separado para pesquisas lógicas e chamadas HTTP, retries limitados, validação de saída, deduplicação de URLs, proveniência das citações e modelos fixos. O checkpoint 7c25f6d passou no CI: 58 testes, 10 verificações smoke offline e três JSON Schemas.
 
 Open Deep Research permanece bloqueado pela auditoria do lock e por sua arquitetura supervisor/subagentes. SearchClaw também não foi aprovado após revisão de SSRF e falta de lock. Local Deep Research é o candidato externo mais promissor para a próxima rodada de hardening, mas ainda tem pontos pendentes e não foi instalado. Veja [revisão de referências externas](docs/EXTERNAL_REFERENCE_REVIEW.md) e [estado de implementação](docs/IMPLEMENTATION_STATUS.md).
 
