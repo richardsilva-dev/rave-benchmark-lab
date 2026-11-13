@@ -149,6 +149,18 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             budget.commit_usage(reservation_id, input_tokens, output_tokens)
             telemetry.tokens_input += input_tokens
             telemetry.tokens_output += output_tokens
+            if output_tokens > output_cap:
+                telemetry.calls.append({
+                    "kind": kind, "status": "FAILED_OUTPUT_CAP_VIOLATION",
+                    "duration_seconds": time.monotonic() - started,
+                    "attempt": attempt, "request_bytes": len(body),
+                    "estimated_input_tokens": estimated_input_tokens,
+                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
+                    "input_tokens": input_tokens, "output_tokens": output_tokens,
+                    "token_accounting": "provider_usage_committed",
+                    "cost_usd": None, "error": "ProviderExceededOutputCap",
+                })
+                raise BudgetExceeded("provider_output_cap_exceeded")
 
             choices = data.get("choices")
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
@@ -243,7 +255,20 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             })
             raise TimeoutError("LLM request timed out") from exc
 
-        except BudgetExceeded:
+        except BudgetExceeded as exc:
+            if reservation_id in budget.reservations:
+                budget.cancel_before_send(reservation_id, kind)
+                telemetry.calls.append({
+                    "kind": kind, "status": "BLOCKED_BUDGET",
+                    "duration_seconds": time.monotonic() - started,
+                    "attempt": attempt, "request_bytes": len(body),
+                    "estimated_input_tokens": estimated_input_tokens,
+                    "reserved_output_tokens": output_cap,
+                    "reserved_total_tokens": reserved_total,
+                    "input_tokens": None, "output_tokens": None,
+                    "token_accounting": "not_sent",
+                    "cost_usd": None, "stop_reason": str(exc),
+                })
             raise
 
         except Exception as exc:
