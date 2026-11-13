@@ -6,7 +6,7 @@ Can RAVE's collective architecture produce better research results than one agen
 
 ## Reference mapping
 
-Use `gpt-4.1-mini` for analysis and, when technically compatible, `gpt-5-search-api` via OpenAI Chat Completions web search as observed in frozen RAVE. The RAVE search component returns provider annotations; this implementation preserves those citations distinctly from model-written URLs. Search call count and any differences in prompting/search context remain explicit confounds. No alternate provider may be silently substituted.
+Use `gpt-4.1-mini` for analysis and `gpt-5-search-api` via OpenAI Chat Completions web search as observed in frozen RAVE. The RAVE search component returns provider annotations; this implementation preserves those citations distinctly from model-written URLs. Search call count and any differences in prompting/search context remain explicit confounds. No alternate provider may be silently substituted.
 
 The shared HTTP client follows the frozen RAVE retry policy: at most three attempts; retries only provider-classified HTTP 429 rate limits; honors `Retry-After` and token-reset headers up to 420 seconds, otherwise uses 1s then 2s; no retries for quota errors, server errors, or timeouts. Each network attempt reserves budget and is logged. The solo telemetry records attempts as individual rows; frozen RAVE aggregates retries into a call record with `request_attempts`. Compare normalized attempt totals, not raw telemetry-row counts.
 
@@ -16,13 +16,15 @@ The solo agent plans a query, performs one bounded search, analyzes results and 
 
 ## Budgets
 
-No numeric limits are selected in this preparation stage. Live CLI execution requires explicit maximum input/output tokens, search attempts, wall-clock seconds and model-call attempts. Every model/search attempt, including retry, must reserve call budget before the network call.
+Live CLI execution requires explicit maximum total tokens, search attempts, wall-clock seconds and model-call attempts. Every network attempt, including retries, reserves a model-call slot and (for search) a search slot before sending.
 
-A USD cost cap is disabled until a dated pricing schedule and estimator are implemented. Programmatic attempts to set a cost limit without an estimator fail closed with `cost_estimation_unavailable`; unknown cost remains null, not zero.
+Before each API request, the client reserves an input estimate based on the serialized UTF-8 request byte length plus `RAVE_INPUT_SAFETY_MARGIN_TOKENS`, and reserves the full request-level `max_completion_tokens` output cap. The search and analysis output caps are explicit configuration values. On success, the reservation is reconciled with provider-reported usage. Rejected HTTP 4xx responses release it. If the request outcome or usage is unknown (for example timeout, transport error, server error or missing usage), the full reservation is conservatively charged as unknown usage and cannot be reused.
 
-Token usage is checked after each provider response. Because exact prompt tokenization and output reservation are not yet implemented, one in-flight response can exceed the remaining token allowance. Treat this as a stop-on-observed-usage guard, not a strict hard cap. Resolve pre-call token reservation before claiming a strict token ceiling in a formal benchmark.
+This is a conservative **pre-call guard**, not an exact token hard cap. Request bytes are not a model tokenizer, and hosted web-search infrastructure can add provider-side prompt/tool overhead that the client cannot inspect. Provider-reported usage is checked after the call; any overrun stops the run and makes it incomplete. Metadata records input/output usage separately from unknown reservation charges and declares that the budget is not provider-exact.
 
-A budget stop is explicit and preserves earlier valid results.
+A USD cost cap is disabled until a dated price schedule and estimator are implemented. Programmatic attempts to set a cost limit without an estimator fail closed with `cost_estimation_unavailable`; unknown cost remains null, not zero.
+
+A budget stop is explicit and preserves earlier valid results. A single in-flight provider response may exceed the estimated reservation if hidden provider-side overhead is larger than the safety margin; record this as a limitation rather than claiming mathematical enforcement.
 
 ## Completion criteria
 
