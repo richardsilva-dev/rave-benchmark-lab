@@ -84,3 +84,25 @@ This section is the current release decision and supersedes any wording above th
 - No official benchmark questions, paired runs, blinded scoring, statistical analysis, or performance claims are authorized by these preparatory checks.
 - Keep both PRs in draft. Do not merge either branch into its default branch as a substitute for passing the gates.
 - Next safe action: run only the capped Comparison A integration probe locally; separately complete B's dependency and isolation gates before any installation or execution.
+
+
+## RAVE calibration run evidence received 2026-11-13
+
+The user supplied the execution report for valid RAVE run `rave-86b64f402cfd` (question: generative AI in education). This is a real RAVE/Hive run, not a paired benchmark run.
+
+Recorded reference values:
+- frozen RAVE branch: `independent_research` (commit `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`), using the shared-search execution path as described in the supplied report;
+- 3 agents completed, 36 inter-agent messages, 18 structured findings, 8 deduplicated provider-returned sources;
+- 8 LLM calls: 1 hosted web-search call, 3 initial agent analyses, 3 cross-agent integration calls, 1 final synthesis;
+- 49,607 input + 26,160 output = 75,767 reported tokens;
+- 200.55 seconds total elapsed time;
+- output covered 4 benefits, 6 risks, 5 recommendations and 6 limitations/divergences.
+
+Interpretation limits:
+- This run is useful as a calibration/reference artifact only. It is not a comparison because no SOLO A or external B run used the same question, scope, initial context, provider configuration and predeclared resource envelope.
+- The run report does not demonstrate a pre-call global token ceiling. Its 75,767 tokens are observed consumption, not an enforceable benchmark budget.
+- A's earlier capped smoke command (20,000 tokens, 1 search, 2 model calls, 180 seconds) is intentionally much smaller than this RAVE run and must never be compared for quality or efficiency.
+- Before the official protocol, choose one common maximum resource envelope for all systems, instrument RAVE's pre-call limits, and keep observed usage separate from configured ceilings. Match model IDs and search route for A; B remains a system-level reference with declared provider/tool deviations.
+- The answer itself must be scored against source documents by blind evaluators; citation presence and model-assigned support labels are not independent fact verification.
+
+This report does not authorize the definitive benchmark protocol or official question set. The user must be notified before that phase begins.
