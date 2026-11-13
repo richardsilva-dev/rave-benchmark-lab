@@ -1,29 +1,25 @@
 # RAVE Benchmark Lab
 
-Laboratório experimental para comparar o RAVE com um agente individual controlado (Comparação A) e com o Open Deep Research da LangChain (Comparação B). Esta preparação não define perguntas oficiais, rubrica, avaliador nem executa benchmark.
+Laboratório para preparar uma comparação controlada entre o RAVE/Hive, um agente individual implementado aqui (Comparação A) e uma referência externa de pesquisa individual (Comparação B). Nesta etapa estamos preparando e protegendo os executores; **não estamos conduzindo o benchmark oficial**.
 
-## Estado
+## Estado atual
 
-Estrutura, contratos e adaptadores iniciais preparados. A versão congelada do RAVE é `richardsilva-dev/project_RAVE`, branch `independent_research`, commit `d5a7b2397bc50796ab83ee22ed326fdc087b84b2` (12/11/2026). A documentação de implementação marca as execuções v3 anteriores como exploratórias; não reutilizá-las como resultados deste laboratório.
+RAVE permanece congelado em richardsilva-dev/project_RAVE, branch independent_research, commit d5a7b2397bc50796ab83ee22ed326fdc087b84b2. O repositório RAVE não foi modificado.
 
-O projeto não está pronto para bateria experimental. A Comparação A possui lockfile, ambiente isolado, auditoria sem achados conhecidos e 21 testes aprovados. A auditoria do lock upstream da Comparação B apontou 89 vulnerabilidades conhecidas e dois status de pacotes arquivados; por segurança, esse ambiente não foi instalado nem executado. Consulte [status](docs/IMPLEMENTATION_STATUS.md) e [auditoria](docs/DEPENDENCY_AUDIT.md). Os limites de custo/tempo/tokens permanecem intencionalmente indefinidos até um piloto.
+A Comparação A está implementada como agente sequencial e foi endurecida na branch sami-token-guard-searchclaw-audit: reserva prévia de tokens por tentativa, orçamento separado para pesquisas lógicas e chamadas HTTP, retries limitados, validação de saída, deduplicação de URLs, proveniência das citações e modelos fixos. O checkpoint 7c25f6d passou no CI: 58 testes, 10 verificações smoke offline e três JSON Schemas.
 
-## Preparação
+Open Deep Research permanece bloqueado pela auditoria do lock e por sua arquitetura supervisor/subagentes. SearchClaw também não foi aprovado após revisão de SSRF e falta de lock. Local Deep Research é o candidato externo mais promissor para a próxima rodada de hardening, mas ainda tem pontos pendentes e não foi instalado. Veja [revisão de referências externas](docs/EXTERNAL_REFERENCE_REVIEW.md) e [estado de implementação](docs/IMPLEMENTATION_STATUS.md).
 
-- [Comparação A](comparison_a/README.md)
-- [Comparação B](comparison_b/README.md)
-- [Arquitetura](docs/ARCHITECTURE.md)
-- [Protocolos](docs/COMPARISON_A_PROTOCOL.md) · [B](docs/COMPARISON_B_PROTOCOL.md)
-- [Mapeamento](docs/MODEL_AND_TOOL_MAPPING.md)
-- [Segurança](SECURITY.md) · [Política](docs/SECURITY_POLICY.md)
-- [Status detalhado](docs/IMPLEMENTATION_STATUS.md)
+## Estrutura
 
-Cada comparação deve usar seu próprio ambiente virtual. A Comparação B usa o `pyproject.toml` e `uv.lock` upstream dentro do submódulo. Não instale dependências no ambiente do RAVE.
+- [Comparação A — agente solo próprio](comparison_a/README.md)
+- [Comparação B — referência externa sob revisão](comparison_b/README.md)
+- [Arquitetura do laboratório](docs/ARCHITECTURE.md)
+- [Protocolo de A](docs/COMPARISON_A_PROTOCOL.md) e [protocolo atual de B](docs/COMPARISON_B_PROTOCOL.md)
+- [Mapeamento de modelos e ferramentas](docs/MODEL_AND_TOOL_MAPPING.md)
+- [Política de segurança](docs/SECURITY_POLICY.md)
+- [Revisão externa de ODR, SearchClaw e LDR](docs/EXTERNAL_REFERENCE_REVIEW.md)
 
-## Segredos
+## Segredos e execução
 
-Copie o `.env.example` da comparação desejada para `.env` e preencha localmente. Nunca registre chaves, resultados reais ou dados pessoais. O laboratório não inicia chamadas de API automaticamente.
-
-## Status GitHub
-
-Este diretório é o checkout local de preparação. A criação do repositório remoto privado requer uma operação GitHub que não está disponível na integração conectada nesta sessão; nenhuma publicação foi feita.
+Cada candidato deve usar ambiente isolado e dependências fixadas. Copie o .env.example pertinente para .env e configure segredos localmente. Nunca registre ou envie chaves para o chat, GitHub, logs ou arquivos de execução versionados. Testes automatizados não fazem chamadas pagas; execução real exige ação explícita e limites declarados.

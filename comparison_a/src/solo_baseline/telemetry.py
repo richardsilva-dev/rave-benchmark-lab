@@ -24,6 +24,8 @@ class Telemetry:
     cost_estimated_usd: float | None = None
     duration_seconds: float = 0.0
     sources_count: int = 0
+    model_reported_sources_count: int = 0
+    rejected_sources_count: int = 0
     errors: list[str] = field(default_factory=list)
     status: str = "INVALID"
     stop_reason: str | None = None
