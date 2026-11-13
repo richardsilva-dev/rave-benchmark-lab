@@ -98,6 +98,14 @@ class BudgetController:
         self.reserved_tokens -= amount
         return amount
 
+    def cancel_before_send(self, reservation_id: int, kind: str) -> int:
+        """Cancel a reserved attempt only when no network request was submitted."""
+        amount = self.release(reservation_id)
+        self.calls -= 1
+        if kind == "search":
+            self.searches -= 1
+        return amount
+
     def commit_usage(self, reservation_id: int, input_tokens: int, output_tokens: int) -> None:
         """Replace a pre-call reservation with usage reported by the provider."""
         if input_tokens < 0 or output_tokens < 0:
