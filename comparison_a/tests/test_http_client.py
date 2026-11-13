@@ -7,7 +7,7 @@ import pytest
 
 from solo_baseline.budget import BudgetController, BudgetExceeded, Limits
 from solo_baseline.config import Settings
-from solo_baseline.http_client import post_chat_completion
+from solo_baseline.http_client import _NoRedirectHandler, post_chat_completion
 from solo_baseline.telemetry import Telemetry
 
 
@@ -251,3 +251,40 @@ def test_client_rejects_model_drift_before_network_call():
     call.assert_not_called()
     assert budget.calls == 0
     assert telemetry.calls == []
+
+
+
+def test_redirect_handler_refuses_redirect_targets():
+    handler = _NoRedirectHandler()
+    request = __import__("urllib.request", fromlist=["Request"]).Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=b"{}",
+        headers={"Authorization": "Bearer test-secret"},
+        method="POST",
+    )
+    redirected = handler.redirect_request(
+        request, None, 302, "Found", {"Location": "https://attacker.invalid/collect"},
+        "https://attacker.invalid/collect",
+    )
+    assert redirected is None
+
+
+def test_http_client_uses_no_redirect_opener():
+    settings, budget, telemetry, payload = setup_client()
+    error = urllib.error.HTTPError(
+        "https://api.openai.com/v1/chat/completions",
+        302,
+        "Found",
+        {"Location": "https://attacker.invalid/collect"},
+        io.BytesIO(b""),
+    )
+    fake_opener = __import__("unittest.mock", fromlist=["Mock"]).Mock()
+    fake_opener.open.side_effect = error
+
+    with patch("solo_baseline.http_client.urllib.request.build_opener", return_value=fake_opener) as build:
+        with pytest.raises(RuntimeError, match="HTTP 302"):
+            post_chat_completion(settings, budget, telemetry, "analysis", payload)
+
+    build.assert_called_once()
+    fake_opener.open.assert_called_once()
+    assert telemetry.calls[0]["token_accounting"] == "reservation_charged_unknown"
