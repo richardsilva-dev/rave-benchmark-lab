@@ -36,7 +36,7 @@ The preflight reserves UTF-8 prompt bytes, each request's completion cap and 16,
 
 ## First capped integration probe (not benchmark data)
 
-Use the exact prior RAVE question and scope. Run this only after local pricing variables are configured and the offline tests pass:
+Reuse the exact prior RAVE question. The archived 2026-11-11 report does not preserve the literal scope string, so this command uses the same default scope as the current RAVE CLI; exact historical scope equality remains unverified. Run only after local pricing variables are configured and the offline tests pass:
 
 ```powershell
 uv run solo-baseline research "Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências." --live --max-tokens 80000 --max-searches 3 --max-seconds 180 --max-cost-usd 0.50 --max-model-calls 12
