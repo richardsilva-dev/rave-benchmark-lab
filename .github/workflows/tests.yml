@@ -2,7 +2,7 @@ name: Comparison A and contract tests
 
 on:
   push:
-    branches: [main, sami-review-budget-guards]
+    branches: [main, sami-review-budget-guards, sami-token-guard-searchclaw-audit]
   pull_request:
     branches: [main]
 
