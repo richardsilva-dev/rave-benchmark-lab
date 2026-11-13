@@ -55,8 +55,10 @@ class Settings:
             raise ValueError("Base URL must be the official HTTPS OpenAI API endpoint /v1")
         if not isinstance(self.analysis_model, str) or not self.analysis_model.strip():
             raise ValueError("Analysis model identifier must not be empty")
-        if not isinstance(self.search_model, str) or not self.search_model.strip():
-            raise ValueError("Search model identifier must not be empty")
+        if self.analysis_model != "gpt-4.1-mini":
+            raise ValueError("Comparison A is pinned to gpt-4.1-mini for analysis; model overrides are not allowed")
+        if self.search_model != "gpt-5-search-api":
+            raise ValueError("Comparison A is pinned to gpt-5-search-api for web search; model overrides are not allowed")
         if isinstance(self.timeout_seconds, bool) or not isinstance(self.timeout_seconds, int) or self.timeout_seconds <= 0:
             raise ValueError("Timeout must be a positive integer")
         if isinstance(self.search_max_output_tokens, bool) or not isinstance(self.search_max_output_tokens, int) or self.search_max_output_tokens <= 0:
