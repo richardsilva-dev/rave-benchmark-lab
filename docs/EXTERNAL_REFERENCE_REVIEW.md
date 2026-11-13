@@ -1,7 +1,7 @@
 # External research-agent reference review
 
 **Review date:** 2026-11-13  
-**Status:** No external candidate is approved for installation or execution.  
+**Status:** Local Deep Research has a user-created fork and a draft hardening branch, but is still not approved for installation or execution.  
 **Purpose:** Select a genuinely solo external research agent for Comparison B without weakening RAVE or confusing a multi-agent system with a single-agent baseline.
 
 ## Decision summary
@@ -24,7 +24,7 @@ The upstream implementation uses a supervisor/subagent research graph. Treating 
 
 A fork by itself would not resolve the findings. A proper fork would need reviewed dependency upgrades, a newly generated immutable lock, a fresh vulnerability audit, regression tests, and a documented architecture change. The frozen upstream environment remains uninstalled and blocked.
 
-**Fork limitation:** The connected GitHub actions available to this session can inspect and edit repository contents and branches, but do not provide a repository-fork operation. No GitHub fork was created or misrepresented as created.
+**Fork status update (2026-11-13):** The user created https://github.com/richardsilva-dev/local-deep-research. Its branch `rave-benchmark-hardened-solo` is six commits ahead of `main` at `ba68db827e0430a7e8b15c9af62918482049b805`; draft PR #1 is open. The branch adds a benchmark profile, a fail-closed environment switch that suppresses the `research_subtopic` tool, and unit tests for the switch. This is a real fork, not an upstream modification.
 
 ## 2. SearchClaw — reviewed, not selected
 
@@ -52,6 +52,14 @@ Reviewed upstream commit: LearningCircuit/local-deep-research 8717d257c234d23a68
 - Its safe_requests path validates destinations and uses DNS pinning for the outbound connection, including re-pinning across redirect hops. Its security documentation explains the remaining boundaries.
 - Its LangGraph strategy exposes include_sub_research; setting it to false removes the research_subtopic subagent tool. The codebase includes tests for this configuration.
 
+### Findings in the user's fork branch
+
+- The branch has not produced a GitHub Actions run in the fork; no CI result is available for the exact branch.
+- `pdm.lock` still resolves `unstructured==0.18.32`, within the affected range `>=0.4.7,<0.24.0` for GHSA-4mvj-m6j5-pmf7 / CVE-2026-71428. The upstream source tripwire asserts no URL reaches the unstructured partitioner and documents that current call sites use local file paths. This is a compensating source-level control, not removal of the vulnerable package. The benchmark profile also says uploads must be disabled, but this fork branch does not yet enforce that prohibition at runtime.
+- The new test file tests `resolve_include_sub_research()` in isolation. It does not instantiate the actual strategy and assert that the runtime tool list excludes `research_subtopic`, that no child research task starts, or that exactly one agent is created.
+- The profile requires OS/container-level egress restrictions, but the fork does not yet provide a reproducible, tested firewall/proxy/container policy or denied-destination integration tests. The in-process egress controls explicitly disclaim being a hard boundary.
+- The environment switch is wired into the LangGraph strategy constructor and the tool is appended only when `self.include_sub_research` is true; this is promising source evidence, but it is not a substitute for runtime verification.
+
 ### Blocking risks and required restrictions
 
 1. The current pyproject.toml explicitly documents unstructured 0.18.x as affected by GHSA-4mvj-m6j5-pmf7 / CVE-2026-71428, a URL-partitioning SSRF. The upstream maintains a source-level tripwire and scanner suppressions because its Python 3.14 production image cannot currently use the fixed upstream release. This is a known unresolved dependency finding, not a clean bill of health.
@@ -63,7 +71,7 @@ Reviewed upstream commit: LearningCircuit/local-deep-research 8717d257c234d23a68
 
 ### Hardening plan before approval
 
-- Create a dedicated fork at a pinned upstream commit; do not patch upstream silently.
+- Keep the existing dedicated fork and pin its upstream base commit; do not patch upstream silently.
 - Use a Python version/build that allows the affected unstructured dependency to be removed or upgraded to a fixed version. If that cannot be resolved with compatible tests, block LDR rather than rely only on the upstream tripwire.
 - Generate and commit a clean PDM lock; run a fresh OSV/pip audit and license inventory against that exact lock. Any unresolved high/critical or archived dependency must be explicitly reviewed and accepted or fixed before installation.
 - Run only the solo LangGraph strategy with include_sub_research=false; add an assertion/test that research_subtopic and child-run creation are absent.
