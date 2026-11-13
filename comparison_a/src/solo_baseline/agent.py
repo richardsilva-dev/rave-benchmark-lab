@@ -121,6 +121,13 @@ class SoloResearchAgent:
             {"url": url, "title": title, "provenance": "provider_returned"},
         )
 
+    def _collect_provider_sources(self, raw_sources, citations):
+        if not isinstance(raw_sources, list):
+            self.telemetry.rejected_sources_count += 1
+            return
+        for source in raw_sources:
+            self._provider_source(source, citations)
+
     def _build_output(self, request_id, status, answer, citations, model_sources, limitations):
         provider_sources = list(citations.values())
         combined = list(provider_sources)
@@ -167,8 +174,7 @@ class SoloResearchAgent:
             result = search.search(request["question"], request.get("scope", ""))
             if not isinstance(result, dict) or not isinstance(result.get("content"), str):
                 raise RuntimeError("Search provider returned an invalid result envelope")
-            for source in result.get("citations", []):
-                self._provider_source(source, citations)
+            self._collect_provider_sources(result.get("citations", []), citations)
             evidence = result["content"]
             answer = None
 
@@ -189,20 +195,24 @@ class SoloResearchAgent:
                 result = search.search(gaps[0], request.get("scope", ""))
                 if not isinstance(result, dict) or not isinstance(result.get("content"), str):
                     raise RuntimeError("Search provider returned an invalid result envelope")
-                for source in result.get("citations", []):
-                    self._provider_source(source, citations)
+                self._collect_provider_sources(result.get("citations", []), citations)
                 evidence = result["content"]
 
             if answer is None:
                 raise RuntimeError("No valid analysis result")
-            status = "COMPLETED" if not answer["gaps"] else "PARTIAL"
+            limitations = list(answer["limitations"])
+            if not citations:
+                limitations.append(
+                    "No structured provider-returned citations were captured; model-reported URLs remain unverified candidates."
+                )
+            status = "COMPLETED" if not answer["gaps"] and citations else "PARTIAL"
             output = self._build_output(
                 request["request_id"],
                 status,
                 answer["answer"],
                 citations,
                 answer["sources"],
-                answer["limitations"],
+                limitations,
             )
             return output, self.telemetry
 
