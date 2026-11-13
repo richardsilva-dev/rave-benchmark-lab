@@ -44,3 +44,20 @@ def test_local_env_file_loads_without_overriding_process_environment(monkeypatch
     settings = Settings.from_env()
     assert settings.api_key == "file-key"
     assert settings.analysis_model == "process-model"
+
+
+@pytest.mark.parametrize("base_url", [
+    "http://api.openai.com/v1",
+    "https://api.openai.com",
+    "https://api.openai.com/v1?redirect=https://example.org",
+    "https://api.openai.com:8443/v1",
+    "https://user:pass@api.openai.com/v1",
+])
+def test_manual_settings_cannot_override_official_provider_boundary(base_url):
+    with pytest.raises(ValueError):
+        Settings("test-key", base_url=base_url)
+
+
+def test_api_key_cannot_contain_header_control_characters():
+    with pytest.raises(ValueError):
+        Settings("secret\r\nX-Injected: true")
