@@ -1,5 +1,5 @@
 """Safe source URL validation and conservative deduplication helpers."""
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 
 _TRACKING_KEYS = {
@@ -58,7 +58,7 @@ def canonical_source_url(value: str) -> str | None:
     if parsed.query:
         for part in parsed.query.split("&"):
             key = part.split("=", 1)[0]
-            decoded_key = key.replace("+", " ").lower()
+            decoded_key = unquote_plus(key).lower()
             if decoded_key.startswith("utm_") or decoded_key in _TRACKING_KEYS:
                 continue
             query_parts.append(part)
@@ -77,5 +77,5 @@ def validate_source_record(source: object) -> None:
     if not isinstance(title, str) or len(title) > 1000:
         raise ValueError("Source title must be a string of at most 1000 characters")
     provenance = source.get("provenance", "provider_returned")
-    if provenance not in {"provider_returned", "model_reported"}:
+    if not isinstance(provenance, str) or provenance not in {"provider_returned", "model_reported"}:
         raise ValueError("Source provenance must be provider_returned or model_reported")
