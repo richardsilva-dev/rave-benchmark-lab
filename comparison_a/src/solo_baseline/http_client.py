@@ -30,6 +30,12 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def _urlopen_no_redirect(req, timeout):
+    """Open a request without following redirects to another origin."""
+    opener = urllib.request.build_opener(_NoRedirectHandler())
+    return opener.open(req, timeout=timeout)
+
+
 class ProviderResponseError(RuntimeError):
     """A provider response was received but failed safe structural validation."""
 
@@ -165,7 +171,7 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
                 raise BudgetExceeded("time_limit_before_request")
             timeout = min(float(settings.timeout_seconds), remaining_seconds)
 
-            with urllib.request.build_opener(_NoRedirectHandler()).open(req, timeout=timeout) as response:
+            with _urlopen_no_redirect(req, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
                 raise ProviderResponseError("LLM provider response exceeded the configured size limit")
