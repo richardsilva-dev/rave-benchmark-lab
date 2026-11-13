@@ -138,6 +138,8 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             ))
             raise
 
+        input_tokens = None
+        output_tokens = None
         reserved_total = (
             estimated_input_tokens
             + budget.limits.input_safety_margin_tokens
@@ -333,8 +335,8 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
                 estimated_input_tokens=estimated_input_tokens,
                 reserved_output_tokens=output_cap,
                 reserved_total_tokens=reserved_total,
-                input_tokens=None,
-                output_tokens=None,
+                input_tokens=None if unknown else input_tokens,
+                output_tokens=None if unknown else output_tokens,
                 unknown_usage_tokens_charged=unknown,
                 token_accounting="reservation_charged_unknown" if unknown else "provider_usage_committed",
                 cost_usd=None,
