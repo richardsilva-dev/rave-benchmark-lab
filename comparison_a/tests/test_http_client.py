@@ -65,7 +65,7 @@ def test_retries_only_provider_rate_limit_and_respects_retry_after():
     })
 
     with (
-        patch("solo_baseline.http_client.urllib.request.urlopen", side_effect=[limited, ok]) as call,
+        patch("solo_baseline.http_client._urlopen_no_redirect", side_effect=[limited, ok]) as call,
         patch("solo_baseline.http_client.time.sleep") as sleep,
     ):
         _, message = post_chat_completion(settings, budget, telemetry, "search", payload)
@@ -96,7 +96,7 @@ def test_non_transient_errors_are_not_retried(status, error):
         io.BytesIO(json.dumps({"error": error}).encode()),
     )
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen", side_effect=exc) as call:
+    with patch("solo_baseline.http_client._urlopen_no_redirect", side_effect=exc) as call:
         with pytest.raises(RuntimeError):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
@@ -115,7 +115,7 @@ def test_timeout_is_logged_once_and_reservation_charged_as_unknown():
     settings, budget, telemetry, payload = setup_client()
 
     with patch(
-        "solo_baseline.http_client.urllib.request.urlopen",
+        "solo_baseline.http_client._urlopen_no_redirect",
         side_effect=TimeoutError("private details"),
     ) as call:
         with pytest.raises(TimeoutError):
@@ -132,7 +132,7 @@ def test_timeout_is_logged_once_and_reservation_charged_as_unknown():
 def test_pre_call_token_reservation_blocks_before_urlopen():
     settings, budget, telemetry, payload = setup_client(max_tokens=10)
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen") as call:
+    with patch("solo_baseline.http_client._urlopen_no_redirect") as call:
         with pytest.raises(BudgetExceeded, match="token_reservation_limit"):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
@@ -149,7 +149,7 @@ def test_success_records_pre_call_reservation_and_reconciles_usage():
         "usage": {"prompt_tokens": 4, "completion_tokens": 2},
     })
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen", return_value=ok) as call:
+    with patch("solo_baseline.http_client._urlopen_no_redirect", return_value=ok) as call:
         _, message = post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
     assert message["content"] == "answer"
@@ -167,7 +167,7 @@ def test_missing_usage_metadata_charges_unknown_and_preserves_safe_error():
     settings, budget, telemetry, payload = setup_client()
     invalid = FakeResponse({"choices": [{"message": {"content": "answer"}}]})
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen", return_value=invalid):
+    with patch("solo_baseline.http_client._urlopen_no_redirect", return_value=invalid):
         with pytest.raises(RuntimeError, match="usage metadata"):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
@@ -184,7 +184,7 @@ def test_malformed_answer_envelope_keeps_reported_usage():
         "usage": {"prompt_tokens": 12, "completion_tokens": 5},
     })
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen", return_value=invalid):
+    with patch("solo_baseline.http_client._urlopen_no_redirect", return_value=invalid):
         with pytest.raises(RuntimeError, match="no choices"):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
@@ -211,7 +211,7 @@ def test_retry_wait_cannot_exceed_remaining_wall_clock_budget():
     )
 
     with (
-        patch("solo_baseline.http_client.urllib.request.urlopen", side_effect=limited) as call,
+        patch("solo_baseline.http_client._urlopen_no_redirect", side_effect=limited) as call,
         patch.object(budget, "remaining", side_effect=[
             {"seconds": 10.0},
             {"seconds": 1.0},
@@ -234,7 +234,7 @@ def test_usage_fields_must_be_non_boolean_integers():
             "choices": [{"message": {"content": "answer"}}],
             "usage": {"prompt_tokens": value, "completion_tokens": 2},
         })
-        with patch("solo_baseline.http_client.urllib.request.urlopen", return_value=invalid):
+        with patch("solo_baseline.http_client._urlopen_no_redirect", return_value=invalid):
             with pytest.raises(RuntimeError, match="usage metadata"):
                 post_chat_completion(settings, budget, telemetry, "analysis", payload)
         assert budget.unknown_usage_tokens > 0
@@ -244,7 +244,7 @@ def test_client_rejects_model_drift_before_network_call():
     settings, budget, telemetry, payload = setup_client()
     payload["model"] = "gpt-4.1"
 
-    with patch("solo_baseline.http_client.urllib.request.urlopen") as call:
+    with patch("solo_baseline.http_client._urlopen_no_redirect") as call:
         with pytest.raises(ValueError, match="frozen comparison configuration"):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
 
