@@ -12,12 +12,15 @@ class Limits:
     max_searches: int
     max_seconds: float
     max_cost_usd: float
+    max_model_calls: int | None = None
 
     def __post_init__(self):
         if self.max_tokens <= 0 or self.max_searches <= 0 or self.max_seconds <= 0:
             raise ValueError("Token, search and time limits must be positive")
         if self.max_cost_usd <= 0:
             raise ValueError("A positive cost ceiling is mandatory for live execution")
+        if self.max_model_calls is not None and self.max_model_calls <= 0:
+            raise ValueError("Model-call limit must be positive")
 
 
 @dataclass
@@ -33,13 +36,17 @@ class BudgetController:
 
     def reserve(self, kind: str, estimated_input_tokens: int, max_output_tokens: int,
                 estimated_cost_usd: float, attempt: int = 1) -> tuple[int, float]:
-        """Fail closed before a network attempt; failed attempts keep their reservation."""
+        """Fail closed before each network attempt; retries consume the same global budget."""
         if time.monotonic() - self.started >= self.limits.max_seconds:
             raise BudgetExceeded("time_limit")
+        if self.limits.max_model_calls is not None and self.calls >= self.limits.max_model_calls:
+            raise BudgetExceeded("model_call_limit")
         if kind == "search" and self.searches >= self.limits.max_searches:
             raise BudgetExceeded("search_limit")
+        if estimated_input_tokens < 0 or max_output_tokens <= 0 or estimated_cost_usd < 0:
+            raise ValueError("Invalid token or cost reservation")
         token_reservation = estimated_input_tokens + max_output_tokens
-        if token_reservation <= 0 or max_output_tokens <= 0:
+        if token_reservation <= 0:
             raise ValueError("A positive token reservation is required")
         if self.tokens + self.reserved_tokens + token_reservation > self.limits.max_tokens:
             raise BudgetExceeded("token_budget_reservation_exceeded")
@@ -75,6 +82,7 @@ class BudgetController:
         return {
             "tokens": max(0, self.limits.max_tokens - self.tokens - self.reserved_tokens),
             "searches": max(0, self.limits.max_searches - self.searches),
+            "model_calls": None if self.limits.max_model_calls is None else max(0, self.limits.max_model_calls - self.calls),
             "seconds": max(0.0, self.limits.max_seconds - elapsed),
             "cost_usd": max(0.0, self.limits.max_cost_usd - self.estimated_cost_usd - self.reserved_cost_usd),
             "reserved_tokens": self.reserved_tokens,
