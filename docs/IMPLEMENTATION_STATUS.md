@@ -13,6 +13,7 @@ The frozen RAVE reference is branch independent_research, commit d5a7b2397bc5079
 Comparison A has its own Python project, uv.lock and isolated environment. The current hardening branch is sami-token-guard-searchclaw-audit.
 
 Implemented controls:
+- Authenticated HTTP requests use a no-redirect opener; 3xx responses fail closed so the bearer API key is not forwarded to a redirect target. Dedicated regression tests cover the handler and transport seam.
 - One sequential researcher with one in-memory run history; no delegated agents.
 - Model identifiers pinned to the frozen RAVE model pair; environment overrides are rejected.
 - Provider endpoint restricted to the official HTTPS OpenAI API origin.
@@ -27,7 +28,7 @@ Implemented controls:
 
 Budget limitations are explicit: serialized UTF-8 bytes are a conservative estimate for visible request input, not the exact model tokenizer. Hidden provider/tool framing is not observable. Provider usage can exceed the estimate; the run then stops after the response and is marked incomplete. A request already in flight may exceed the wall-clock target. USD budget is fail-closed/disabled until a dated price schedule and estimator exist; unknown cost is null, never zero.
 
-GitHub Actions run 43438761461 passed on exact HEAD 7c25f6d0701e1d7c2c91a65309440704b40ac199: isolated installation from uv.lock succeeded, all 58 pytest tests passed, all 10 offline security smoke checks passed, and the three shared JSON Schemas parsed successfully. The run made no live API calls. Subsequent changes are documentation-only; re-check CI for a later branch head before merging.
+GitHub Actions runs 43449308048 and 43449301945 passed on exact HEAD 444534af2369ce9602ef002b7a75c8a0bbf748e4: isolated installation from uv.lock succeeded, all 60 pytest tests passed, all 10 offline security smoke checks passed, and the three shared JSON Schemas parsed successfully. No live API call was made by CI. This checkpoint also includes a no-redirect HTTP transport: authenticated API requests now refuse 3xx redirects rather than allowing urllib's default redirect behavior.
 
 The user reports that comparison_a/.env and RAVE_API_KEY are now configured on their local machine. The local filesystem is not accessible through the GitHub connection, so the secret was neither read nor transmitted. No live API call has been made. A single explicitly capped local integration probe is still required; the user can run it locally without sharing the key.
 
