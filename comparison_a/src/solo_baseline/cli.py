@@ -50,7 +50,7 @@ def main():
         "budget_limits": {"max_tokens": args.max_tokens, "max_searches": args.max_searches,
                           "max_seconds": args.max_seconds, "max_cost_usd": args.max_cost_usd,
                           "max_model_calls": args.max_model_calls},
-        "pricing_version": PRICE_VERSION, "pricing_rates_usd_per_1m": rates,
+        "pricing_version": PRICE_VERSION, "pricing_rates_usd_per_1m": rates,\n        "pricing_source": "user-configured local .env; verify against the applicable OpenAI billing record",
         "web_search_fee_usd_per_call": WEB_SEARCH_USD_PER_CALL,
         "max_allowed_run_cost_usd": MAX_ALLOWED_RUN_COST_USD,
         "search_input_reservation_tokens": settings.search_input_reserve_tokens,
