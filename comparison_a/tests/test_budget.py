@@ -37,3 +37,26 @@ def test_invalid_numeric_limits_rejected():
         Limits(0, 1, 1, 1.0)
     with pytest.raises(ValueError):
         Limits(100, 1, 1, 0)
+
+
+def test_global_model_call_limit_counts_retries():
+    budget = BudgetController(Limits(1000, 3, 10, 1.0, max_model_calls=2))
+    budget.reserve("search", 10, 10, 0.001, attempt=1)
+    budget.reserve("analysis", 10, 10, 0.001, attempt=1)
+    with pytest.raises(BudgetExceeded, match="model_call_limit"):
+        budget.reserve("analysis", 10, 10, 0.001, attempt=2)
+    assert budget.calls == 2
+    assert budget.remaining()["model_calls"] == 0
+
+
+def test_model_call_limit_must_be_positive():
+    with pytest.raises(ValueError, match="Model-call limit"):
+        Limits(1000, 3, 10, 1.0, max_model_calls=0)
+
+
+def test_search_price_requires_explicit_configuration(monkeypatch):
+    from solo_baseline.pricing import configured_model_rates
+    monkeypatch.delenv("RAVE_SEARCH_INPUT_USD_PER_1M", raising=False)
+    monkeypatch.delenv("RAVE_SEARCH_OUTPUT_USD_PER_1M", raising=False)
+    with pytest.raises(BudgetExceeded, match="missing_or_invalid_price_setting"):
+        configured_model_rates()
