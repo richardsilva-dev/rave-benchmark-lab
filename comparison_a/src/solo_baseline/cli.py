@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 from pathlib import Path
 import uuid
 from .budget import BudgetController, Limits
@@ -12,15 +11,15 @@ def main():
     p=argparse.ArgumentParser(prog="solo-baseline")
     sub=p.add_subparsers(dest="command",required=True)
     r=sub.add_parser("research"); r.add_argument("question"); r.add_argument("--scope",default=""); r.add_argument("--live",action="store_true")
-    r.add_argument("--max-tokens",type=int); r.add_argument("--max-searches",type=int); r.add_argument("--max-seconds",type=float); r.add_argument("--max-cost-usd",type=float)
+    r.add_argument("--max-tokens",type=int); r.add_argument("--max-searches",type=int); r.add_argument("--max-seconds",type=float); r.add_argument("--max-model-calls",type=int)
     args=p.parse_args()
     if not args.live:
         p.error("No API calls are made unless --live is explicit")
-    if not all(v is not None for v in (args.max_tokens,args.max_searches,args.max_seconds)):
-        p.error("Live mode requires explicit --max-tokens, --max-searches, and --max-seconds; no defaults are chosen")
+    if not all(v is not None for v in (args.max_tokens,args.max_searches,args.max_seconds,args.max_model_calls)):
+        p.error("Live mode requires explicit --max-tokens, --max-searches, --max-seconds, and --max-model-calls; no defaults are chosen")
     settings=Settings.from_env()
     if not settings.api_key: p.error("RAVE_API_KEY is required")
-    budget=BudgetController(Limits(args.max_tokens,args.max_searches,args.max_seconds,args.max_cost_usd))
+    budget=BudgetController(Limits(args.max_tokens,args.max_searches,args.max_seconds,None,args.max_model_calls))
     request={"schema_version":"1.0","request_id":"req-"+uuid.uuid4().hex[:12],"question":args.question,"scope":args.scope}
     result,meta=SoloResearchAgent(settings,budget).run(request)
     out=Path(__file__).resolve().parents[3] / "artifacts" / "runs" / meta.run_id; out.mkdir(parents=True,exist_ok=True)

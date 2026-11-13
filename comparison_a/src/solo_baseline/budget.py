@@ -12,12 +12,15 @@ class Limits:
     max_searches: int
     max_seconds: float
     max_cost_usd: float | None
+    max_model_calls: int | None = None
 
     def __post_init__(self):
         if self.max_tokens <= 0 or self.max_searches <= 0 or self.max_seconds <= 0:
             raise ValueError("All required budget limits must be positive")
         if self.max_cost_usd is not None and self.max_cost_usd <= 0:
             raise ValueError("Cost limit must be positive")
+        if self.max_model_calls is not None and self.max_model_calls <= 0:
+            raise ValueError("Model-call limit must be positive")
 
 
 @dataclass
@@ -33,6 +36,10 @@ class BudgetController:
         """Reserve before every network attempt, including retries."""
         if time.monotonic() - self.started >= self.limits.max_seconds:
             raise BudgetExceeded("time_limit")
+        if self.limits.max_model_calls is not None and self.calls >= self.limits.max_model_calls:
+            raise BudgetExceeded("model_call_limit")
+        if self.limits.max_cost_usd is not None and self.estimated_cost_usd is None:
+            raise BudgetExceeded("cost_estimation_unavailable")
         if kind == "search" and self.searches >= self.limits.max_searches:
             raise BudgetExceeded("search_limit")
         if self.calls and self.tokens >= self.limits.max_tokens:
@@ -61,5 +68,6 @@ class BudgetController:
     def remaining(self) -> dict:
         return {"tokens": max(0, self.limits.max_tokens - self.tokens),
                 "searches": max(0, self.limits.max_searches - self.searches),
+                "model_calls": None if self.limits.max_model_calls is None else max(0, self.limits.max_model_calls - self.calls),
                 "seconds": max(0.0, self.limits.max_seconds - (time.monotonic() - self.started)),
                 "cost_usd": None if self.limits.max_cost_usd is None or self.estimated_cost_usd is None else max(0.0, self.limits.max_cost_usd - self.estimated_cost_usd)}
