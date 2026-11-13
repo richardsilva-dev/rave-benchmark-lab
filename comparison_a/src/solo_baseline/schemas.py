@@ -31,7 +31,7 @@ class ResearchResult:
             or self.system_id != "solo_baseline"
         ):
             raise ValueError("Invalid result identity or schema version")
-        if self.status not in {"COMPLETED", "PARTIAL", "INVALID", "FAILED"}:
+        if not isinstance(self.status, str) or self.status not in {"COMPLETED", "PARTIAL", "INVALID", "FAILED"}:
             raise ValueError("Invalid run status")
         if not isinstance(self.answer, str):
             raise ValueError("Result answer must be a string")
