@@ -2,7 +2,7 @@
 
 ## Question
 
-Can RAVE's collective architecture produce better research results than one agent when models, tools, scope, and experimental limits are controlled? The baseline is one researcher, one decision loop and one run memory. It has no supervisor, subagents, MessageBus, peer communication or delegated research instances.
+Can RAVE's collective architecture produce better research results than one agent when models, tools, scope, and experimental limits are controlled? The baseline is one researcher, one decision loop and one run memory. It has no supervisor, subagents, MessageBus, peer communication or delegated research instances. The historical 2026-11-11 RAVE report preserves the question but not a literal scope string; using the shared CLI default is a provisional pilot setting, not proof of exact historical scope equality.
 
 ## Reference mapping
 
