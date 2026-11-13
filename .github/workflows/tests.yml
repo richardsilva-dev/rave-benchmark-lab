@@ -1,0 +1,36 @@
+name: Comparison A and contract tests
+
+on:
+  push:
+    branches: [main, sami-review-budget-guards]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  comparison-a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: comparison_a/uv.lock
+      - name: Install isolated Comparison A environment
+        working-directory: comparison_a
+        run: uv sync --locked --extra dev
+      - name: Run Comparison A tests
+        working-directory: comparison_a
+        run: uv run --locked --extra dev pytest -p no:cacheprovider -q
+      - name: Run offline security smoke checks
+        working-directory: comparison_a
+        run: uv run --locked --extra dev python tests/offline_smoke.py
+      - name: Validate shared JSON schemas
+        run: python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('contracts').glob('*.schema.json')]; print('JSON schemas parsed successfully')"
