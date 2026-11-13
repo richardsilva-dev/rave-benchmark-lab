@@ -32,6 +32,42 @@ class Settings:
     analysis_max_output_tokens: int = 2048
     input_safety_margin_tokens: int = 1024
 
+    def __post_init__(self):
+        if not isinstance(self.api_key, str) or any(
+            ord(char) < 32 or ord(char) == 127 for char in self.api_key
+        ):
+            raise ValueError("API key must be a string without control characters")
+        try:
+            parsed = urlsplit(self.base_url)
+            port = parsed.port
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Invalid OpenAI API base URL") from exc
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != "api.openai.com"
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+            or parsed.path.rstrip("/") != "/v1"
+            or port not in (None, 443)
+        ):
+            raise ValueError("Base URL must be the official HTTPS OpenAI API endpoint /v1")
+        if not isinstance(self.analysis_model, str) or not self.analysis_model.strip():
+            raise ValueError("Analysis model identifier must not be empty")
+        if not isinstance(self.search_model, str) or not self.search_model.strip():
+            raise ValueError("Search model identifier must not be empty")
+        if isinstance(self.timeout_seconds, bool) or not isinstance(self.timeout_seconds, int) or self.timeout_seconds <= 0:
+            raise ValueError("Timeout must be a positive integer")
+        if isinstance(self.search_max_output_tokens, bool) or not isinstance(self.search_max_output_tokens, int) or self.search_max_output_tokens <= 0:
+            raise ValueError("Search output token cap must be a positive integer")
+        if isinstance(self.analysis_max_output_tokens, bool) or not isinstance(self.analysis_max_output_tokens, int) or self.analysis_max_output_tokens <= 0:
+            raise ValueError("Analysis output token cap must be a positive integer")
+        if isinstance(self.input_safety_margin_tokens, bool) or not isinstance(self.input_safety_margin_tokens, int) or self.input_safety_margin_tokens < 0:
+            raise ValueError("Input safety margin must be a non-negative integer")
+        if self.search_context_size not in {"low", "medium", "high"}:
+            raise ValueError("Search context size must be low, medium, or high")
+
     @classmethod
     def from_env(cls) -> "Settings":
         _load_dotenv()
@@ -43,18 +79,9 @@ class Settings:
         except ValueError as exc:
             raise ValueError("Timeout, output token caps and input safety margin must be integers") from exc
         base = os.getenv("RAVE_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
-        parsed = urlsplit(base)
         context = os.getenv("RAVE_SEARCH_CONTEXT_SIZE", "low").lower()
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ValueError("RAVE_BASE_URL must be HTTPS without credentials, query, or fragment")
-        if parsed.hostname != "api.openai.com":
-            raise ValueError("Hosted web search requires the official OpenAI endpoint; no provider fallback is allowed")
-        if timeout <= 0 or search_max_out <= 0 or analysis_max_out <= 0 or input_margin < 0 or context not in {"low", "medium", "high"}:
-            raise ValueError("Invalid timeout, output token caps, input safety margin, or search context size")
         analysis_model = os.getenv("RAVE_MODEL", "gpt-4.1-mini").strip()
         search_model = os.getenv("RAVE_SEARCH_MODEL", "gpt-5-search-api").strip()
-        if not analysis_model or not search_model:
-            raise ValueError("Analysis and search model identifiers must not be empty")
         return cls(
             api_key=os.getenv("RAVE_API_KEY", "").strip(),
             base_url=base,
