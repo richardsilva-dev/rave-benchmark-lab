@@ -23,11 +23,15 @@ class OfflineSmoke(unittest.TestCase):
         self.assertGreater(settings.search_max_output_tokens, 0)
         self.assertGreaterEqual(settings.input_safety_margin_tokens, 0)
 
-    def test_budget_counts_retry_attempts(self):
-        budget = BudgetController(Limits(100, 1, 10, None, input_safety_margin_tokens=0))
-        budget.reserve("search", estimated_input_tokens=1, reserved_output_tokens=1)
+    def test_search_budget_counts_logical_searches_not_retries(self):
+        budget = BudgetController(Limits(100, 1, 10, None, max_model_calls=3, input_safety_margin_tokens=0))
+        budget.reserve("search", 1, estimated_input_tokens=1, reserved_output_tokens=1)
+        budget.reserve("search", 2, estimated_input_tokens=1, reserved_output_tokens=1)
+        self.assertEqual(budget.searches, 1)
+        self.assertEqual(budget.search_attempts, 2)
+        self.assertEqual(budget.calls, 2)
         with self.assertRaises(BudgetExceeded):
-            budget.reserve("search", 2, estimated_input_tokens=1, reserved_output_tokens=1)
+            budget.reserve("search", 1, estimated_input_tokens=1, reserved_output_tokens=1)
 
     def test_token_reservation_blocks_before_limit(self):
         budget = BudgetController(Limits(5, 1, 10, None, input_safety_margin_tokens=0))
