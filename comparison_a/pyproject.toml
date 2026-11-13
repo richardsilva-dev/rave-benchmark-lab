@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rave-solo-baseline"
+version = "0.1.0"
+description = "Controlled single-agent research baseline for RAVE Benchmark Lab"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+solo-baseline = "solo_baseline.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/solo_baseline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

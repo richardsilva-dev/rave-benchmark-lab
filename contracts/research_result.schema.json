@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rave-benchmark-lab.local/contracts/research_result.schema.json",
+  "title": "ResearchResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_id", "system_id", "status", "answer", "sources", "limitations"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string"},
+    "system_id": {"enum": ["rave", "solo_baseline", "open_deep_research"]},
+    "status": {"enum": ["COMPLETED", "PARTIAL", "INVALID", "FAILED"]},
+    "answer": {"type": "string"},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "system_details": {"type": "object"}
+  },
+  "$defs": {"source": {"type": "object", "additionalProperties": true, "required": ["url", "provenance"], "properties": {"title": {"type": "string"}, "url": {"type": "string", "format": "uri"}, "provenance": {"enum": ["provider_returned", "model_reported", "system_reported", "unknown"]}, "supports_claim_ids": {"type": "array", "items": {"type": "string"}}}}}
+}

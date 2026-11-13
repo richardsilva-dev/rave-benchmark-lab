@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rave-benchmark-lab.local/contracts/research_request.schema.json",
+  "title": "ResearchRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_id", "question", "scope"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "minLength": 1},
+    "question": {"type": "string", "minLength": 1},
+    "scope": {"type": "string"},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "requested_at": {"type": "string", "format": "date-time"}
+  }
+}

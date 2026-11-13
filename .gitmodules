@@ -1,0 +1,3 @@
+[submodule "comparison_b/upstream/open_deep_research"]
+	path = comparison_b/upstream/open_deep_research
+	url = https://github.com/langchain-ai/open_deep_research.git

@@ -1,0 +1,12 @@
+{
+  "bind_host": "127.0.0.1",
+  "enable_remote_tracing": false,
+  "enable_mcp": false,
+  "interactive_clarification": false,
+  "allowed_tools": ["web_search", "public_page_read"],
+  "models": {
+    "analysis": "gpt-4.1-mini",
+    "search": "gpt-5-search-api"
+  },
+  "note": "Example intent only. Confirm exact field names and support in the pinned upstream checkout; do not assume these keys are consumed."
+}
