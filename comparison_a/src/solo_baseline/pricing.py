@@ -1,40 +1,33 @@
-"""Dated, fail-closed API pricing inputs.
+"""Official OpenAI rates used for the Comparison A cost estimate.
 
-The official OpenAI pricing page currently publishes gpt-4.1-mini rates and the
-web-search call fee, but does not expose a dedicated gpt-5-search-api token row
-in its model table. Do not substitute third-party estimates: require explicit
-search-model rates from the account's applicable pricing/billing information.
+GPT-5 Search API is the Chat Completions search-model path. The GPT-5 model
+page publishes the GPT-5 token rates; OpenAI pricing lists Web Search at
+$10/1,000 calls, plus search-content tokens at model rates.
+Rates are USD per 1M tokens, except WEB_SEARCH_USD_PER_CALL.
+Reviewed against official pricing/model docs on 2026-11-13.
 """
-import os
 from .budget import BudgetExceeded
 
 PRICE_VERSION = "2026-11-13"
 MODEL_RATES = {
-    "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
+    "gpt-4.1-mini": {"input": 0.40, "output": 1.60, "cached_input": 0.10},
+    # GPT-5 Search API uses the GPT-5 search-model path. Apply GPT-5 published
+    # token rates; search tool call fees are added separately below.
+    "gpt-5-search-api": {"input": 1.25, "output": 10.00, "cached_input": 0.125},
 }
-WEB_SEARCH_USD_PER_CALL = 0.01 / 1000
+WEB_SEARCH_USD_PER_CALL = 10.00 / 1000
+MAX_ALLOWED_RUN_COST_USD = 0.50
 
 
 def model_rate(model: str) -> dict:
-    if model in MODEL_RATES:
-        return MODEL_RATES[model]
-    if model != "gpt-5-search-api":
-        raise BudgetExceeded(f"no_price_configured_for_model:{model}")
     try:
-        input_rate = float(os.getenv("RAVE_SEARCH_INPUT_USD_PER_1M", ""))
-        output_rate = float(os.getenv("RAVE_SEARCH_OUTPUT_USD_PER_1M", ""))
-    except ValueError as exc:
-        raise BudgetExceeded("invalid_search_model_pricing_configuration") from exc
-    if input_rate <= 0 or output_rate <= 0:
-        raise BudgetExceeded("official_search_model_token_rates_must_be_configured")
-    return {"input": input_rate, "output": output_rate}
+        return MODEL_RATES[model]
+    except KeyError as exc:
+        raise BudgetExceeded(f"no_price_configured_for_model:{model}") from exc
 
 
 def configured_model_rates() -> dict:
-    return {
-        "gpt-4.1-mini": MODEL_RATES["gpt-4.1-mini"],
-        "gpt-5-search-api": model_rate("gpt-5-search-api"),
-    }
+    return {name: dict(rates) for name, rates in MODEL_RATES.items()}
 
 
 def estimate_cost(model: str, input_tokens: int, output_tokens: int, web_search: bool = False) -> float:
