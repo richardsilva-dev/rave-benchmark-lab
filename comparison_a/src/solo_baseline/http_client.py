@@ -129,17 +129,6 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
-                unknown = _finalize_unknown(budget, reservation_id)
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": None, "output_tokens": None,
-                    "unknown_usage_tokens_charged": unknown,
-                    "token_accounting": "reservation_charged_unknown",
-                    "cost_usd": None, "error": "ResponseTooLarge",
-                })
                 raise RuntimeError("LLM provider response exceeded the configured size limit")
 
             data = json.loads(raw.decode("utf-8"))
@@ -147,47 +136,14 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
                 raise ValueError("Provider response root must be an object")
             usage = data.get("usage")
             if not isinstance(usage, dict) or "prompt_tokens" not in usage or "completion_tokens" not in usage:
-                unknown = _finalize_unknown(budget, reservation_id)
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": None, "output_tokens": None,
-                    "unknown_usage_tokens_charged": unknown,
-                    "token_accounting": "reservation_charged_unknown",
-                    "cost_usd": None, "error": "MissingUsageMetadata",
-                })
                 raise RuntimeError("LLM provider omitted required token usage metadata")
 
             try:
                 input_tokens = int(usage["prompt_tokens"])
                 output_tokens = int(usage["completion_tokens"])
             except (TypeError, ValueError) as exc:
-                unknown = _finalize_unknown(budget, reservation_id)
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": None, "output_tokens": None,
-                    "unknown_usage_tokens_charged": unknown,
-                    "token_accounting": "reservation_charged_unknown",
-                    "cost_usd": None, "error": "InvalidUsageMetadata",
-                })
                 raise RuntimeError("LLM provider returned invalid token usage metadata") from exc
             if input_tokens < 0 or output_tokens < 0:
-                unknown = _finalize_unknown(budget, reservation_id)
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": None, "output_tokens": None,
-                    "unknown_usage_tokens_charged": unknown,
-                    "token_accounting": "reservation_charged_unknown",
-                    "cost_usd": None, "error": "NegativeUsageMetadata",
-                })
                 raise RuntimeError("LLM provider returned negative token usage metadata")
 
             budget.commit_usage(reservation_id, input_tokens, output_tokens)
@@ -196,27 +152,9 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
 
             choices = data.get("choices")
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": input_tokens, "output_tokens": output_tokens,
-                    "token_accounting": "provider_usage_committed",
-                    "cost_usd": None, "error": "InvalidChoices",
-                })
                 raise RuntimeError("LLM provider returned no choices")
             message = choices[0].get("message")
             if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": input_tokens, "output_tokens": output_tokens,
-                    "token_accounting": "provider_usage_committed",
-                    "cost_usd": None, "error": "MissingTextContent",
-                })
                 raise RuntimeError("LLM provider returned no text content")
 
             telemetry.calls.append({
