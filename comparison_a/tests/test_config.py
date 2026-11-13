@@ -37,13 +37,14 @@ def test_invalid_negative_safety_margin_rejected(monkeypatch):
 
 
 def test_local_env_file_loads_without_overriding_process_environment(monkeypatch, tmp_path):
-    (tmp_path / ".env").write_text("RAVE_API_KEY='file-key'\nRAVE_MODEL=file-model\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("RAVE_API_KEY='file-key'\nRAVE_TIMEOUT_SECONDS=30\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("RAVE_API_KEY", raising=False)
-    monkeypatch.setenv("RAVE_MODEL", "process-model")
+    monkeypatch.setenv("RAVE_TIMEOUT_SECONDS", "10")
     settings = Settings.from_env()
     assert settings.api_key == "file-key"
-    assert settings.analysis_model == "process-model"
+    assert settings.timeout_seconds == 10
+    assert settings.analysis_model == "gpt-4.1-mini"
 
 
 @pytest.mark.parametrize("base_url", [
