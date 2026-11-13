@@ -116,3 +116,8 @@ This report does not authorize the definitive benchmark protocol or official que
 - No paid API call was made from CI. No API key was read or transmitted. No official benchmark question set or scoring protocol has been created.
 
 **Release status:** A is ready only for a user-run, capped integration probe. B is blocked. The official benchmark is not yet ready.
+
+
+### Provenance gap in the supplied RAVE calibration report
+
+The report describes the run's behavior as one shared web-search result reused by all three agents, while the candidate frozen code reference is currently recorded as branch `independent_research` at commit `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`. The report itself does not include the exact Git commit or a machine-readable config snapshot. Therefore the run cannot yet be cryptographically tied to that branch/commit, and the branch name alone must not be used to infer the executed research mode. Before preregistration, export the run manifest/config from `rave-86b64f402cfd` and confirm its code SHA and actual research mode; otherwise label it only as an unpinned historical calibration run.
