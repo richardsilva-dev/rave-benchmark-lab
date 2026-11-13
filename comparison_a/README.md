@@ -39,7 +39,7 @@ The preflight reserves UTF-8 prompt bytes, each request's completion cap and 16,
 Use the exact prior RAVE question and scope. Run this only after local pricing variables are configured and the offline tests pass:
 
 ```powershell
-uv run solo-baseline research "Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências." --scope "Usar o mesmo escopo do RAVE run válido de 2026-11-11; priorizar fontes institucionais; identificar data, evidência, limitações e divergências." --live --max-tokens 80000 --max-searches 3 --max-seconds 180 --max-cost-usd 0.50 --max-model-calls 12
+uv run solo-baseline research "Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências." --live --max-tokens 80000 --max-searches 3 --max-seconds 180 --max-cost-usd 0.50 --max-model-calls 12
 ```
 
 The CLI prints the artifact directory. Each run writes `result.json` and `metadata.json` under `artifacts/runs/<run_id>/`. A run must report `COMPLETED`; `PARTIAL` or `FAILED` is not a valid matched output.
