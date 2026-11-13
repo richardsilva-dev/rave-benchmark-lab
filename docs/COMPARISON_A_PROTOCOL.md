@@ -8,7 +8,7 @@ Can RAVE's collective architecture produce better research results than one agen
 
 Use `gpt-4.1-mini` for analysis and, when technically compatible, `gpt-5-search-api` via OpenAI Chat Completions web search as observed in frozen RAVE. The RAVE search component returns provider annotations; this implementation preserves those citations distinctly from model-written URLs. Search call count and any differences in prompting/search context remain explicit confounds. No alternate provider may be silently substituted.
 
-The shared HTTP client follows the frozen RAVE retry policy: at most three attempts; retries only provider-classified HTTP 429 rate limits; honors `Retry-After` and token-reset headers up to 420 seconds, otherwise uses 1s then 2s; no retries for quota errors, server errors, or timeouts. Each attempt reserves budget and is logged. This policy was checked against the frozen RAVE implementation at the pinned commit.
+The shared HTTP client follows the frozen RAVE retry policy: at most three attempts; retries only provider-classified HTTP 429 rate limits; honors `Retry-After` and token-reset headers up to 420 seconds, otherwise uses 1s then 2s; no retries for quota errors, server errors, or timeouts. Each network attempt reserves budget and is logged. The solo telemetry records attempts as individual rows; frozen RAVE aggregates retries into a call record with `request_attempts`. Compare normalized attempt totals, not raw telemetry-row counts.
 
 ## Loop
 
@@ -16,7 +16,13 @@ The solo agent plans a query, performs one bounded search, analyzes results and 
 
 ## Budgets
 
-No numeric limits are selected in this preparation stage. Every model/search attempt, including retry, must reserve budget before the network call. Enforce max total tokens, searches, wall-clock time, and cost only when a known price schedule is configured. Record unknown cost as null, not zero. A budget stop is explicit and preserves earlier valid results.
+No numeric limits are selected in this preparation stage. Live CLI execution requires explicit maximum input/output tokens, search attempts, wall-clock seconds and model-call attempts. Every model/search attempt, including retry, must reserve call budget before the network call.
+
+A USD cost cap is disabled until a dated pricing schedule and estimator are implemented. Programmatic attempts to set a cost limit without an estimator fail closed with `cost_estimation_unavailable`; unknown cost remains null, not zero.
+
+Token usage is checked after each provider response. Because exact prompt tokenization and output reservation are not yet implemented, one in-flight response can exceed the remaining token allowance. Treat this as a stop-on-observed-usage guard, not a strict hard cap. Resolve pre-call token reservation before claiming a strict token ceiling in a formal benchmark.
+
+A budget stop is explicit and preserves earlier valid results.
 
 ## Completion criteria
 
