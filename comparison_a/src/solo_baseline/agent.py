@@ -36,18 +36,45 @@ class SoloResearchAgent:
         self.telemetry = Telemetry(analysis_model=settings.analysis_model, search_model=settings.search_model)
 
     @staticmethod
+    def _parse_json(raw):
+        text = raw.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            start, end = text.find("{"), text.rfind("}")
+            if start >= 0 and end > start:
+                return json.loads(text[start:end + 1])
+            raise
+
+    @staticmethod
     def _validate(data):
-        if not isinstance(data, dict) or not isinstance(data.get("summary"), str):
-            raise ValueError("Single-agent response has no valid summary")
-        for key in ("findings", "limitations", "open_questions"):
-            if not isinstance(data.get(key), list):
-                raise ValueError(f"Single-agent response has invalid {key}")
+        required = {"summary": str, "findings": list, "limitations": list, "open_questions": list}
+        if not isinstance(data, dict) or any(not isinstance(data.get(key), kind) for key, kind in required.items()):
+            raise ValueError("Single-agent response is outside the RAVE result schema")
+        for key in ("limitations", "open_questions"):
+            if any(not isinstance(value, str) for value in data[key]):
+                raise ValueError(f"Invalid {key}; expected strings")
+        string_fields = ("category", "title", "claim", "explanation", "evidence_status", "status_rationale")
+        evidence_fields = ("source_title", "source_url", "supporting_excerpt_or_location", "author_or_institution",
+            "published_at", "updated_at", "source_type")
         for finding in data["findings"]:
-            if not isinstance(finding, dict) or any(not isinstance(finding.get(k), str)
-                    for k in ("category", "title", "claim", "explanation")):
-                raise ValueError("Single-agent response contains malformed finding")
-            if not isinstance(finding.get("evidence", []), list):
-                raise ValueError("Single-agent response contains malformed evidence")
+            if not isinstance(finding, dict) or any(not isinstance(finding.get(key), str)
+                    for key in ("category", "title", "claim", "explanation")) or any(
+                    key in finding and not isinstance(finding[key], str) for key in string_fields):
+                raise ValueError("Malformed finding")
+            for key in ("limitations", "open_questions", "evidence"):
+                if not isinstance(finding.get(key), list):
+                    raise ValueError(f"Invalid finding {key}")
+            for key in ("limitations", "open_questions"):
+                if any(not isinstance(value, str) for value in finding[key]):
+                    raise ValueError(f"Invalid finding {key}")
+            if any(not isinstance(item, dict) or any(not isinstance(item.get(field), str)
+                    for field in ("source_title", "source_url", "supporting_excerpt_or_location")) or any(
+                    field in item and not isinstance(item[field], str) for field in evidence_fields)
+                    for item in finding["evidence"]):
+                raise ValueError("Malformed finding evidence")
         return data
 
     def _repair_json(self, raw):
@@ -68,8 +95,7 @@ class SoloResearchAgent:
             ],
         }
         _, message = post_chat_completion(self.settings, self.budget, self.telemetry, "analysis", payload)
-        parsed = json.loads(message["content"])
-        return self._validate(parsed)
+        return self._validate(self._parse_json(message["content"]))
 
     def _analysis(self, request, shared_research):
         prompt_data = {
@@ -91,11 +117,10 @@ class SoloResearchAgent:
             ],
         }
         _, message = post_chat_completion(self.settings, self.budget, self.telemetry, "analysis", payload)
-        raw = message["content"]
         try:
-            return self._validate(json.loads(raw))
+            return self._validate(self._parse_json(message["content"]))
         except (json.JSONDecodeError, ValueError):
-            return self._repair_json(raw)
+            return self._repair_json(message["content"])
 
     def run(self, request: dict):
         started = time.monotonic()
