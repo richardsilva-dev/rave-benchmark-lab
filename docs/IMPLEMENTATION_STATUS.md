@@ -14,7 +14,7 @@ Updated 2026-11-13. The private repository `richardsilva-dev/rave-benchmark-lab`
 
 ## Not complete / blockers
 
-- Shell Git network access is blocked, so local commits could not be pushed; the created private remote is currently empty.
+- Local Git network access is blocked. An attempt to push the checkout to the newly created remote was also rejected by automatic review because it would publish the complete local source checkout and explicit publication authorization was not established. No workaround was attempted; the private remote remains empty.
 - Open Deep Research has not been fetched as an actual git submodule; its license and dependencies have not been audited. The upstream SHA is recorded but must be verified at submodule checkout.
 - No resolved `uv.lock` files yet; neither isolated environment is prepared.
 - The pytest suite, dependency audit and API integration checks have not run. Nine stdlib offline smoke checks pass; no real API calls were made.
