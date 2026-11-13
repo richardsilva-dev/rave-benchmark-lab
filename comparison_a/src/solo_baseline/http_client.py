@@ -1,8 +1,8 @@
 """OpenAI Chat Completions transport with pre-call resource reservations.
 
 The input estimate is serialized UTF-8 request bytes plus a safety margin.
-This is a conservative local estimate, not an exact tokenizer or a guarantee
-about hidden provider-side prompts/tool framing. Output is capped explicitly.
+This is not an exact tokenizer or a guarantee about hidden provider-side
+prompt/tool framing. Output is capped explicitly by max_completion_tokens.
 """
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -17,11 +17,18 @@ from .budget import BudgetExceeded
 
 MAX_REQUEST_BYTES = 1_100_000
 MAX_RESPONSE_BYTES = 4_000_000
+MAX_RETRY_WAIT_SECONDS = 420
+
+
+class ProviderResponseError(RuntimeError):
+    """A provider response was received but failed safe structural validation."""
 
 
 def _safe_error_fields(exc):
+    """Extract only provider error identifiers; never retain the raw message."""
     try:
-        payload = json.loads(exc.read(64_000).decode("utf-8", errors="replace"))
+        body = exc.read(64_000)
+        payload = json.loads(body.decode("utf-8", errors="replace"))
         error = payload.get("error", {}) if isinstance(payload, dict) else {}
         if not isinstance(error, dict):
             return "", ""
@@ -40,15 +47,21 @@ def _safe_error_fields(exc):
 
 
 def _retry_after_seconds(value):
-    if not value:
+    if not isinstance(value, str) or not value.strip():
         return None
+    value = value.strip()
     try:
         seconds = float(value)
     except ValueError:
         duration = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s)?", value)
         if duration and any(duration.groups()):
             hours, minutes, seconds_part = duration.groups()
-            return max(0.0, int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds_part or 0))
+            return max(
+                0.0,
+                int(hours or 0) * 3600
+                + int(minutes or 0) * 60
+                + float(seconds_part or 0),
+            )
         try:
             retry_at = parsedate_to_datetime(value)
             if retry_at.tzinfo is None:
@@ -65,7 +78,20 @@ def _finalize_unknown(budget, reservation_id):
     return 0
 
 
+def _attempt_record(kind, status, attempt, started, logical_started, **fields):
+    record = {
+        "kind": kind,
+        "status": status,
+        "attempt": attempt,
+        "duration_seconds": max(0.0, time.monotonic() - started),
+        "logical_call_elapsed_seconds": max(0.0, time.monotonic() - logical_started),
+    }
+    record.update(fields)
+    return record
+
+
 def post_chat_completion(settings, budget, telemetry, kind, payload):
+    """Perform one logical API call, logging and budgeting every HTTP attempt."""
     if not settings.api_key:
         raise RuntimeError("RAVE_API_KEY is missing")
     output_cap = payload.get("max_completion_tokens")
@@ -85,11 +111,10 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
         },
         method="POST",
     )
-    started = time.monotonic()
-    last_attempt = 0
+    logical_started = time.monotonic()
 
     for attempt in range(1, 4):
-        last_attempt = attempt
+        attempt_started = time.monotonic()
         reservation_id = None
         try:
             reservation_id = budget.reserve(
@@ -99,21 +124,18 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
                 reserved_output_tokens=output_cap,
             )
         except BudgetExceeded as exc:
-            telemetry.calls.append({
-                "kind": kind,
-                "status": "BLOCKED_BUDGET",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt,
-                "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap,
-                "reserved_total_tokens": None,
-                "input_tokens": None,
-                "output_tokens": None,
-                "token_accounting": "not_sent",
-                "cost_usd": None,
-                "stop_reason": str(exc),
-            })
+            telemetry.calls.append(_attempt_record(
+                kind, "BLOCKED_BUDGET", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=None,
+                input_tokens=None,
+                output_tokens=None,
+                token_accounting="not_sent",
+                cost_usd=None,
+                stop_reason=str(exc),
+            ))
             raise
 
         reserved_total = (
@@ -121,71 +143,89 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             + budget.limits.input_safety_margin_tokens
             + output_cap
         )
+
         try:
             remaining_seconds = budget.remaining()["seconds"]
-            if remaining_seconds <= 0:
-                raise BudgetExceeded("time_limit")
-            timeout = min(settings.timeout_seconds, max(0.001, remaining_seconds))
+            if remaining_seconds <= 0.001:
+                raise BudgetExceeded("time_limit_before_request")
+            timeout = min(float(settings.timeout_seconds), remaining_seconds)
+
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
-                raise RuntimeError("LLM provider response exceeded the configured size limit")
-
-            data = json.loads(raw.decode("utf-8"))
-            if not isinstance(data, dict):
-                raise ValueError("Provider response root must be an object")
-            usage = data.get("usage")
-            if not isinstance(usage, dict) or "prompt_tokens" not in usage or "completion_tokens" not in usage:
-                raise RuntimeError("LLM provider omitted required token usage metadata")
+                raise ProviderResponseError("LLM provider response exceeded the configured size limit")
 
             try:
-                input_tokens = int(usage["prompt_tokens"])
-                output_tokens = int(usage["completion_tokens"])
-            except (TypeError, ValueError) as exc:
-                raise RuntimeError("LLM provider returned invalid token usage metadata") from exc
-            if input_tokens < 0 or output_tokens < 0:
-                raise RuntimeError("LLM provider returned negative token usage metadata")
+                data = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ProviderResponseError("LLM provider returned invalid JSON") from exc
+            if not isinstance(data, dict):
+                raise ProviderResponseError("LLM provider response root must be an object")
 
+            usage = data.get("usage")
+            if not isinstance(usage, dict) or "prompt_tokens" not in usage or "completion_tokens" not in usage:
+                raise ProviderResponseError("LLM provider omitted required token usage metadata")
+
+            input_tokens = usage["prompt_tokens"]
+            output_tokens = usage["completion_tokens"]
+            for name, value in (("prompt_tokens", input_tokens), ("completion_tokens", output_tokens)):
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise ProviderResponseError(f"LLM provider returned invalid {name} usage metadata")
+
+            # Usage is committed before validating the answer envelope so even
+            # malformed model responses cannot escape token accounting.
             budget.commit_usage(reservation_id, input_tokens, output_tokens)
             telemetry.tokens_input += input_tokens
             telemetry.tokens_output += output_tokens
+
             if output_tokens > output_cap:
-                telemetry.calls.append({
-                    "kind": kind, "status": "FAILED_OUTPUT_CAP_VIOLATION",
-                    "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                    "input_tokens": input_tokens, "output_tokens": output_tokens,
-                    "token_accounting": "provider_usage_committed",
-                    "cost_usd": None, "error": "ProviderExceededOutputCap",
-                })
+                telemetry.calls.append(_attempt_record(
+                    kind, "FAILED_OUTPUT_CAP_VIOLATION", attempt, attempt_started, logical_started,
+                    request_bytes=len(body),
+                    estimated_input_tokens=estimated_input_tokens,
+                    reserved_output_tokens=output_cap,
+                    reserved_total_tokens=reserved_total,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    token_accounting="provider_usage_committed",
+                    cost_usd=None,
+                    error="ProviderExceededOutputCap",
+                ))
                 raise BudgetExceeded("provider_output_cap_exceeded")
 
             choices = data.get("choices")
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-                raise RuntimeError("LLM provider returned no choices")
+                raise ProviderResponseError("LLM provider returned no choices")
             message = choices[0].get("message")
             if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-                raise RuntimeError("LLM provider returned no text content")
+                raise ProviderResponseError("LLM provider returned no text content")
 
-            telemetry.calls.append({
-                "kind": kind, "status": "COMPLETED",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt, "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                "input_tokens": input_tokens, "output_tokens": output_tokens,
-                "token_accounting": "provider_usage_committed",
-                "cost_usd": None,
-            })
-            budget.check_after_call()
+            telemetry.calls.append(_attempt_record(
+                kind, "COMPLETED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                token_accounting="provider_usage_committed",
+                cost_usd=None,
+            ))
+            try:
+                budget.check_after_call()
+            except BudgetExceeded as exc:
+                # The provider call succeeded, but its measured usage or elapsed
+                # time exceeded the run budget. Preserve that distinction.
+                telemetry.calls[-1]["post_call_budget_status"] = "overrun_detected_after_response"
+                telemetry.calls[-1]["stop_reason"] = str(exc)
+                raise
             return data, message
 
         except urllib.error.HTTPError as exc:
             code, error_type = _safe_error_fields(exc)
+            headers = exc.headers or {}
             retry_values = [
-                _retry_after_seconds(exc.headers.get(header))
+                _retry_after_seconds(headers.get(header))
                 for header in ("Retry-After", "x-ratelimit-reset-tokens")
             ]
             retry_after = max((value for value in retry_values if value is not None), default=None)
@@ -196,6 +236,7 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             unknown = 0 if rejected else _finalize_unknown(budget, reservation_id)
             if rejected and reservation_id in budget.reservations:
                 budget.release(reservation_id)
+
             details = []
             if code:
                 details.append(f"code={code}")
@@ -204,86 +245,119 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             if retry_after is not None:
                 details.append(f"retry_after={retry_after:g}s")
             suffix = f" ({', '.join(details)})" if details else ""
-            telemetry.calls.append({
-                "kind": kind, "status": "FAILED",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt, "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                "input_tokens": None, "output_tokens": None,
-                "unknown_usage_tokens_charged": unknown,
-                "token_accounting": "released_rejected_request" if rejected else "reservation_charged_unknown",
-                "cost_usd": None, "error": f"HTTP {exc.code}",
-            })
+            telemetry.calls.append(_attempt_record(
+                kind, "FAILED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=None,
+                output_tokens=None,
+                unknown_usage_tokens_charged=unknown,
+                token_accounting="released_rejected_request" if rejected else "reservation_charged_unknown",
+                cost_usd=None,
+                error=f"HTTP {exc.code}",
+            ))
+
             if transient and attempt < 3:
                 delay = retry_after if retry_after is not None else 2 ** (attempt - 1)
-                if delay <= 420:
-                    time.sleep(delay)
-                    continue
+                remaining_seconds = budget.remaining()["seconds"]
+                if delay > MAX_RETRY_WAIT_SECONDS:
+                    raise BudgetExceeded("retry_delay_exceeds_allowed_wait") from exc
+                if delay >= remaining_seconds:
+                    raise BudgetExceeded("retry_delay_exceeds_remaining_time_budget") from exc
+                time.sleep(delay)
+                continue
             raise RuntimeError(f"LLM provider returned HTTP {exc.code}{suffix}") from exc
 
         except urllib.error.URLError as exc:
             unknown = _finalize_unknown(budget, reservation_id)
             reason = type(exc.reason).__name__
-            telemetry.calls.append({
-                "kind": kind, "status": "FAILED",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt, "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                "input_tokens": None, "output_tokens": None,
-                "unknown_usage_tokens_charged": unknown,
-                "token_accounting": "reservation_charged_unknown",
-                "cost_usd": None, "error": reason,
-            })
+            telemetry.calls.append(_attempt_record(
+                kind, "FAILED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=None,
+                output_tokens=None,
+                unknown_usage_tokens_charged=unknown,
+                token_accounting="reservation_charged_unknown",
+                cost_usd=None,
+                error=reason,
+            ))
             if isinstance(exc.reason, TimeoutError):
                 raise TimeoutError("LLM request timed out") from exc
             raise RuntimeError("Could not reach LLM provider") from exc
 
         except TimeoutError as exc:
             unknown = _finalize_unknown(budget, reservation_id)
-            telemetry.calls.append({
-                "kind": kind, "status": "FAILED",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt, "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                "input_tokens": None, "output_tokens": None,
-                "unknown_usage_tokens_charged": unknown,
-                "token_accounting": "reservation_charged_unknown",
-                "cost_usd": None, "error": "TimeoutError",
-            })
+            telemetry.calls.append(_attempt_record(
+                kind, "FAILED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=None,
+                output_tokens=None,
+                unknown_usage_tokens_charged=unknown,
+                token_accounting="reservation_charged_unknown",
+                cost_usd=None,
+                error="TimeoutError",
+            ))
             raise TimeoutError("LLM request timed out") from exc
 
         except BudgetExceeded as exc:
             if reservation_id in budget.reservations:
-                budget.cancel_before_send(reservation_id, kind)
-                telemetry.calls.append({
-                    "kind": kind, "status": "BLOCKED_BUDGET",
-                    "duration_seconds": time.monotonic() - started,
-                    "attempt": attempt, "request_bytes": len(body),
-                    "estimated_input_tokens": estimated_input_tokens,
-                    "reserved_output_tokens": output_cap,
-                    "reserved_total_tokens": reserved_total,
-                    "input_tokens": None, "output_tokens": None,
-                    "token_accounting": "not_sent",
-                    "cost_usd": None, "stop_reason": str(exc),
-                })
+                # Only pre-send budget checks reach here with a live reservation.
+                budget.cancel_before_send(reservation_id, kind, attempt)
+                telemetry.calls.append(_attempt_record(
+                    kind, "BLOCKED_BUDGET", attempt, attempt_started, logical_started,
+                    request_bytes=len(body),
+                    estimated_input_tokens=estimated_input_tokens,
+                    reserved_output_tokens=output_cap,
+                    reserved_total_tokens=reserved_total,
+                    input_tokens=None,
+                    output_tokens=None,
+                    token_accounting="not_sent",
+                    cost_usd=None,
+                    stop_reason=str(exc),
+                ))
+            raise
+
+        except ProviderResponseError as exc:
+            unknown = _finalize_unknown(budget, reservation_id)
+            telemetry.calls.append(_attempt_record(
+                kind, "FAILED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=None,
+                output_tokens=None,
+                unknown_usage_tokens_charged=unknown,
+                token_accounting="reservation_charged_unknown" if unknown else "provider_usage_committed",
+                cost_usd=None,
+                error="ProviderResponseError",
+                validation_error=str(exc),
+            ))
             raise
 
         except Exception as exc:
             unknown = _finalize_unknown(budget, reservation_id)
-            telemetry.calls.append({
-                "kind": kind, "status": "FAILED",
-                "duration_seconds": time.monotonic() - started,
-                "attempt": attempt, "request_bytes": len(body),
-                "estimated_input_tokens": estimated_input_tokens,
-                "reserved_output_tokens": output_cap, "reserved_total_tokens": reserved_total,
-                "input_tokens": None, "output_tokens": None,
-                "unknown_usage_tokens_charged": unknown,
-                "token_accounting": "reservation_charged_unknown" if unknown else "provider_usage_committed",
-                "cost_usd": None, "error": type(exc).__name__,
-            })
-            raise RuntimeError("LLM provider response could not be validated") from exc
+            telemetry.calls.append(_attempt_record(
+                kind, "FAILED", attempt, attempt_started, logical_started,
+                request_bytes=len(body),
+                estimated_input_tokens=estimated_input_tokens,
+                reserved_output_tokens=output_cap,
+                reserved_total_tokens=reserved_total,
+                input_tokens=None,
+                output_tokens=None,
+                unknown_usage_tokens_charged=unknown,
+                token_accounting="reservation_charged_unknown" if unknown else "provider_usage_committed",
+                cost_usd=None,
+                error=type(exc).__name__,
+            ))
+            raise ProviderResponseError("LLM provider response could not be validated") from exc
 
-    raise RuntimeError(f"LLM provider call failed after {last_attempt} attempts")
+    raise RuntimeError("LLM provider call failed after the retry limit")
