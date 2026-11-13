@@ -24,7 +24,7 @@ def main():
     if not args.live:
         parser.error("No API calls are made unless --live is explicit")
     if not all(value is not None for value in (args.max_tokens, args.max_searches, args.max_seconds, args.max_cost_usd, args.max_model_calls)):
-        parser.error("Live mode requires explicit --max-tokens, --max-searches, --max-seconds and --max-cost-usd")
+        parser.error("Live mode requires explicit --max-tokens, --max-searches, --max-seconds and --max-cost-usd and --max-model-calls")
     if args.max_cost_usd > MAX_ALLOWED_RUN_COST_USD:
         parser.error(f"Initial benchmark policy caps each live run at US${MAX_ALLOWED_RUN_COST_USD:.2f}; lower --max-cost-usd")
     settings = Settings.from_env()
@@ -53,7 +53,7 @@ def main():
         "web_search_fee_usd_per_call": WEB_SEARCH_USD_PER_CALL,
         "max_allowed_run_cost_usd": MAX_ALLOWED_RUN_COST_USD,
         "search_input_reservation_tokens": settings.search_input_reserve_tokens,
-        "budget_note": "Preflight reserves local prompt bytes, max completion tokens and a 16,384-token hosted-search context allowance. Provider-side search context is variable and may exceed the allowance; reconcile provider usage and use account-level spend limits. GPT-5 Search API token rates use the published GPT-5 model rates; web search fee is separately charged at USD 10/1,000 calls. Per-run local ceiling is USD 0.50. Local estimates are not a billing hard cap."
+        "budget_note": "Preflight reserves UTF-8 prompt bytes, max completion tokens and the configured hosted-search context allowance. Provider-side search context is variable and may exceed the allowance. GPT-5 Search API token rates are user-configured because no distinct official rate row is published. The local USD 0.50 ceiling is an estimate, not a provider-enforced billing cap; retain account/project spend limits."
     })
     (output_dir / "metadata.json").write_text(json.dumps(md, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"run_id": metadata.run_id, "status": metadata.status, "artifact_dir": str(output_dir),
