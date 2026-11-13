@@ -1,25 +1,31 @@
 # Implementation status
 
-Updated 2026-11-13. Private remote: https://github.com/richardsilva-dev/rave-benchmark-lab, branch `main`. Local commits have been published. The RAVE main repository was not modified.
+Updated 2026-11-13. Private repository: https://github.com/richardsilva-dev/rave-benchmark-lab. Current preparation work is isolated on branch `comparison-a-budget-and-methodology-hardening`; no changes are merged into `main` or the RAVE production repository.
 
-## Completed
+## Comparison A hardening on this branch
 
-- Separate lab repository created and published privately.
-- Frozen RAVE branch and commit verified; architecture, modes, models, provider, and dependency facts documented from that revision.
-- Comparison A has its own Python project, `uv.lock`, and `.venv`; config validation, single sequential agent, hosted search matching the RAVE provider, budget controller, telemetry, schema validation, source provenance, and SSRF-conscious page reader are implemented.
-- Comparison A dependency audit found no known vulnerabilities or adverse package statuses.
-- Comparison A `uv sync --locked --extra dev` completed. `uv run --locked --extra dev pytest -p no:cacheprovider -q`: 21 passed. Offline smoke checks passed. No real API call was made because neither a local `.env` nor `RAVE_API_KEY` was present.
-- Common contracts, adapters, protocol docs, and security docs exist. JSON contract syntax and Python byte-compilation passed.
-- Open Deep Research is an actual git submodule at `1b7d2e80db9faa586165c60e09096dbbfd483a64`; the upstream MIT license is preserved. Config fields and model/search mapping are inspected and documented.
+- One-agent baseline aligned to RAVE's shared search, analysis schema and JSON repair strategy.
+- Token and estimated-cost reservations occur before each outbound request; retries retain reservations conservatively.
+- A global model-call-attempt limit is now supported and counts retries and JSON repair calls.
+- CLI requires explicit token, search, wall-time, cost and model-call limits; maximum allowed local run-cost argument is USD 0.50.
+- GPT-4.1-mini rates and Web Search fee are configured from the official OpenAI pricing page. GPT-5 Search API has no distinct token-rate row on that page, so live execution requires explicit local input/output rates; unknown rates fail closed.
+- Suggested first pilot limits: 40,000 tokens, 3 search attempts, 5 model-call attempts, 180 seconds and USD 0.50 estimated cost.
+- Metadata records configured limits, pricing version/rates, reserved search context and estimated cost.
 
-## Security gate and remaining work
+## Important limitations
 
-- `uv audit --locked` on the Open Deep Research lock reported 89 known advisories across 242 packages and archived statuses for `langchain-community` and `rsa`. The audit output contained no severity scores. Per the lab's security rule, Comparison B installation, startup, and smoke test are stopped pending review. The upstream lock has not been edited. See [DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md).
-- Comparison B has no installed independent virtual environment, so the lab is not ready for a benchmark.
-- Comparison A's real installation probe awaits a locally configured API key; no credentials were read or logged and no paid calls were made.
-- No numeric budgets, official questions, scoring rubric, evaluator, or benchmark run were created.
-- Model/search equality is imperfect: Open Deep Research `search_api="openai"` uses `web_search_preview`, while frozen RAVE uses `gpt-5-search-api` via Chat Completions. This is documented as a confound.
+- Local cost and token ceilings are estimates. Provider-supplied search context is variable, and no local estimator can guarantee a hard provider billing cap. Configure an OpenAI project spend limit independently.
+- The GPT-5 Search API token rates must be verified in the user's billing/pricing context or explicitly marked as a proxy assumption before the run.
+- GitHub source edits are not equivalent to a local test run. Run the locked test suite in the local VS Code checkout before any paid API call.
+- The RAVE runtime itself still needs a matching run-wide token/cost budget implementation before a fully budget-matched paired experiment. This pilot only validates the solo baseline.
+- Comparison B remains blocked by the documented dependency/security findings. Do not install or execute it.
 
-## Before any benchmark
+## First paid pilot gate
 
-Assess and resolve Comparison B's dependency security findings without silently changing the frozen upstream reference; prepare and audit its independent environment; verify local loopback startup, models/search, source retention, and metadata; run the Comparison A live installation probe when credentials are configured; complete adapter compatibility tests; then define the formal experimental protocol in a later stage. Do not start official comparisons while these items remain pending.
+1. Configure the two GPT-5 Search API rate variables in the local ignored `.env`.
+2. Verify the OpenAI project spend limit is enabled.
+3. Run locked pytest and offline smoke checks.
+4. Execute exactly one capped Comparison A pilot with the documented prior question and scope.
+5. Inspect both `result.json` and `metadata.json`; only `COMPLETED` is a valid integration result.
+
+This pilot is not official benchmark data and must not be used for a comparative claim.
