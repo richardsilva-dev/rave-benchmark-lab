@@ -6,27 +6,31 @@ Updated 2026-11-13. Private remote: https://github.com/richardsilva-dev/rave-ben
 
 - Separate lab repository created and published privately.
 - Frozen RAVE branch and commit verified; architecture, modes, models, provider, and dependency facts documented from that revision.
-- Comparison A has its own Python project, `uv.lock`, and `.venv`; config validation, single sequential agent, hosted search matching the RAVE provider, budget controller, telemetry, schema validation, source provenance, and SSRF-conscious page reader are implemented.
+- Comparison A has its own Python project, `uv.lock`, and `.venv`; config validation, one sequential agent, hosted search matching the RAVE provider, budget controller, telemetry, schema validation, source provenance, and SSRF-conscious optional page reader are implemented.
 - Comparison A dependency audit found no known vulnerabilities or adverse package statuses.
-- Comparison A `uv sync --locked --extra dev` completed. `uv run --locked --extra dev pytest -p no:cacheprovider -q`: 21 passed. Offline smoke checks passed. No real API call was made because neither a local `.env` nor `RAVE_API_KEY` was present.
+- Initial Comparison A installation completed with `uv sync --locked --extra dev`; 21 tests passed in the Codex environment. Subsequent budget-guard PR run 43426091579 passed 24 tests plus offline smoke checks and schema parsing.
 - Common contracts, adapters, protocol docs, and security docs exist. JSON contract syntax and Python byte-compilation passed.
-- Open Deep Research is an actual git submodule at `1b7d2e80db9faa586165c60e09096dbbfd483a64`; the upstream MIT license is preserved. Config fields and model/search mapping are inspected and documented.
+- Open Deep Research is pinned as a submodule at `1b7d2e80db9faa586165c60e09096dbbfd483a64` (MIT); its original lock remains unchanged.
 
-## Continuation branch: sami-review-budget-guards
+## Current continuation branch: sami-token-guard-searchclaw-audit
 
-This review branch was created from published commit `ea72c080f1edea48d968e4fd0a46d10aaef5003e`. It adds an explicit max-model-call cap (counting retry attempts) and fails closed if a USD budget is supplied without a cost estimator. Three focused budget tests were added. GitHub Actions run `43426091579` completed successfully: 24 pytest tests passed, the offline security smoke suite passed, and all three shared JSON schemas parsed successfully. These changes are not yet merged.
+This branch adds a pre-call token reservation to Comparison A. Every network attempt reserves serialized request bytes plus a configured safety margin and the request's maximum output-token cap before calling the provider. Successful usage reconciles the reservation; rejected 4xx releases it; unknown outcomes (timeout, network/5xx failure or missing usage metadata) conservatively charge the full reservation. A provider output-cap violation stops the run. The CLI and metadata expose input/output tokens, unknown usage, remaining reservations and the estimate method.
 
-The current token limit is checked after provider-reported usage. One in-flight response can exceed the remaining allowance; do not describe the token limit as a strict hard cap until prompt estimation/output reservation is implemented.
+Important limitation: UTF-8 request bytes plus a safety margin are not an exact tokenizer and cannot reveal hidden hosted-tool prompt framing. This is stronger than a post-response-only limit but is not described as a mathematical hard cap. A real provider response can still exceed the estimate; post-call reconciliation detects and stops after that response.
 
-## Security gate and remaining work
+These changes have not yet been validated by GitHub Actions. The workflow must be updated to run on this continuation branch and must pass before treating the changes as verified.
 
-- `uv audit --locked` on the Open Deep Research lock reported 89 known advisories across 242 packages and archived statuses for `langchain-community` and `rsa`. The audit output contained no severity scores. Per the lab's security rule, Comparison B installation, startup, and smoke test are stopped pending review. The upstream lock has not been edited. See [DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md).
-- Comparison B has no installed independent virtual environment, so the lab is not ready for a benchmark.
-- Comparison A's real installation probe awaits a locally configured API key; no credentials were read or logged and no paid calls were made.
-- No official questions, scoring rubric, evaluator, or benchmark run were created.
-- Model/search equality is imperfect: Open Deep Research `search_api="openai"` uses `web_search_preview`, while frozen RAVE uses `gpt-5-search-api` via Chat Completions. This is documented as a confound.
-- The Open Deep Research runner is intentionally not configured: its preflight fails closed while the pinned upstream lock has known advisories. Do not bypass this gate or silently patch upstream.
+## Security gate: external reference
 
-## Before any benchmark
+- Open Deep Research's frozen lock audit reported 89 known advisories across 242 packages and adverse archived statuses for `langchain-community` and `rsa`; the audit output did not provide severity scores. The upstream lock has not been changed, and that environment has not been installed or executed.
+- A separate alternative review is underway. SearchClaw appears to support OpenAI through LiteLLM and has SSRF checks, but has no committed dependency lock in the inspected branch; redirect revalidation and optional tools/memory/skills need hardening and its dependencies need lock+audit before installation. It is only a candidate, not an approved safe baseline.
+- No external reference system has been installed or executed. No fork has been created.
+- Comparison A's real installation/API probe still requires a local `.env` with a valid `RAVE_API_KEY`; no credentials were read or logged and no paid API call was made.
 
-Assess and resolve Comparison B's dependency security findings without silently changing the frozen upstream reference; prepare and audit its independent environment; verify local loopback startup, models/search, source retention, and metadata; run the Comparison A live installation probe when credentials are configured; complete adapter compatibility tests; then define the formal experimental protocol in a later stage. Confirm the continuation branch tests before merging it. Do not start official comparisons while these items remain pending.
+## Before benchmark preparation can be considered complete
+
+1. Pass GitHub Actions for the pre-call reservation branch.
+2. Run the local Comparison A tests and offline smoke checks; then, when the user configures credentials locally, run one small real installation probe. This is not benchmark data.
+3. Choose and harden an external B reference only after a pinned commit, dependency lock, audit, static security review, and tests pass.
+4. Complete the adapter/metadata validation and document model/search differences.
+5. Ask the user before beginning the formal benchmark protocol (question set, repetitions, rubric and statistical plan). No official questions or benchmark have been created.
