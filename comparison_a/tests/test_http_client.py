@@ -44,6 +44,7 @@ def setup_client(max_tokens=1000, max_seconds=60, max_searches=3, max_calls=10):
 
 def test_retries_only_provider_rate_limit_and_respects_retry_after():
     settings, budget, telemetry, payload = setup_client(max_searches=1, max_calls=3)
+    payload["model"] = settings.search_model
     body = json.dumps({
         "error": {
             "type": "rate_limit_error",
