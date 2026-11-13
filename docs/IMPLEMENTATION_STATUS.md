@@ -14,7 +14,7 @@ Updated 2026-11-13. Private remote: https://github.com/richardsilva-dev/rave-ben
 
 ## Continuation branch: sami-review-budget-guards
 
-This review branch was created from published commit `ea72c080f1edea48d968e4fd0a46d10aaef5003e`. It adds an explicit max-model-call cap (counting retry attempts) and fails closed if a USD budget is supplied without a cost estimator. Three focused budget tests were added. These changes are not yet merged and their CI result is pending.
+This review branch was created from published commit `ea72c080f1edea48d968e4fd0a46d10aaef5003e`. It adds an explicit max-model-call cap (counting retry attempts) and fails closed if a USD budget is supplied without a cost estimator. Three focused budget tests were added. GitHub Actions run `43426091579` completed successfully: 24 pytest tests passed, the offline security smoke suite passed, and all three shared JSON schemas parsed successfully. These changes are not yet merged.
 
 The current token limit is checked after provider-reported usage. One in-flight response can exceed the remaining allowance; do not describe the token limit as a strict hard cap until prompt estimation/output reservation is implemented.
 
