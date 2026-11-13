@@ -20,6 +20,16 @@ MAX_RESPONSE_BYTES = 4_000_000
 MAX_RETRY_WAIT_SECONDS = 420
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Never forward an authenticated API request to a redirect target."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # urllib's default handler follows POST redirects and can preserve
+        # caller-supplied Authorization headers. The API client is pinned to
+        # one origin, so any redirect is an unexpected provider response.
+        return None
+
+
 class ProviderResponseError(RuntimeError):
     """A provider response was received but failed safe structural validation."""
 
@@ -155,7 +165,7 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
                 raise BudgetExceeded("time_limit_before_request")
             timeout = min(float(settings.timeout_seconds), remaining_seconds)
 
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with urllib.request.build_opener(_NoRedirectHandler()).open(req, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
                 raise ProviderResponseError("LLM provider response exceeded the configured size limit")
