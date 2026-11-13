@@ -2,22 +2,29 @@
 
 ## Question
 
-Can RAVE's collective architecture produce better research results than one agent when models, tools, scope, and experimental limits are controlled? This baseline is one researcher with one sequential decision loop and one run memory. It has no supervisor, subagents, MessageBus, peer communication or delegated research instances.
+Can RAVE's collective architecture produce better research results than one agent when models, tools, scope, and experimental limits are controlled? The baseline is one researcher, one decision loop and one run memory. It has no supervisor, subagents, MessageBus, peer communication or delegated research instances.
 
 ## Reference mapping
 
-Use `gpt-4.1-mini` for analysis and, when technically compatible, `gpt-5-search-api` via OpenAI Chat Completions web search as observed in frozen RAVE. The RAVE search component returns provider annotations; this implementation preserves those citations distinctly from model-written URLs. Search call count and any differences in prompting/search context remain explicit confounds. No alternate provider may be silently substituted.
+Use `gpt-4.1-mini` for analysis and `gpt-5-search-api` for hosted web search through OpenAI Chat Completions, matching the frozen RAVE configuration. Preserve provider-returned citations separately from model-reported URLs. Search-call count, prompt differences and the single-agent versus multi-agent architecture remain explicit methodological variables.
 
-The shared HTTP client follows the frozen RAVE retry policy: at most three attempts; retries only provider-classified HTTP 429 rate limits; honors `Retry-After` and token-reset headers up to 420 seconds, otherwise uses 1s then 2s; no retries for quota errors, server errors, or timeouts. Each attempt reserves budget and is logged. This policy was checked against the frozen RAVE implementation at the pinned commit.
+The HTTP client follows the frozen RAVE retry policy: at most three attempts; retry only provider-classified HTTP 429 rate limits; honor `Retry-After` and token-reset headers up to 420 seconds, otherwise use 1s then 2s; do not retry quota errors, server errors or timeouts. Every attempt reserves budget before the network call and is recorded.
 
-## Loop
+## Pilot limits
 
-The solo agent plans a query, performs one bounded search, analyzes results and gaps, and may repeat sequentially while budget remains. It synthesizes only after the loop ends, validates structured output and source URLs, and marks exhausted/incomplete runs `PARTIAL`, never `COMPLETED`. Web page contents are not fetched by default: the frozen RAVE search tool exposes provider annotations and summarized result content. The safe page reader is an independently controlled capability for compatible providers and must not be represented as RAVE-equivalent without protocol changes.
+The initial live integration pilot is limited to one run with:
+- 40,000 total reserved/observed tokens
+- 3 search attempts, including retries
+- 5 total model-call attempts, including retries and JSON repair
+- 180 seconds wall time
+- USD 0.50 estimated cost ceiling
 
-## Budgets
+All limits are mandatory CLI inputs. The run must fail closed before a request when a reservation would exceed a limit. Failed attempts retain reservations conservatively. The search reservation includes the configured 16,384-token allowance for provider-supplied search context, plus local prompt bytes and max completion tokens. Since provider-side context size is variable, this local estimate is not a strict provider-side token or billing cap. An OpenAI project spend limit is an additional required safeguard.
 
-No numeric limits are selected in this preparation stage. Every model/search attempt, including retry, must reserve budget before the network call. Enforce max total tokens, searches, wall-clock time, and cost only when a known price schedule is configured. Record unknown cost as null, not zero. A budget stop is explicit and preserves earlier valid results.
+## Pricing
 
-## Completion criteria
+GPT-4.1-mini rates and the Web Search call fee are based on the official OpenAI pricing page. The pricing page does not expose a distinct GPT-5 Search API token-rate row. The local program therefore requires explicit `RAVE_SEARCH_INPUT_USD_PER_1M` and `RAVE_SEARCH_OUTPUT_USD_PER_1M` values in the ignored local `.env`. Record whether these are directly confirmed rates or an explicitly accepted proxy. Unknown prices block live execution; no third-party estimate is silently substituted.
 
-Unit tests use mocked clients only. A real integration probe requires configured credentials and explicit invocation; it is installation validation, not benchmark data. The official question set and quality rubric belong to a later protocol stage.
+## Pilot versus benchmark
+
+The first capped live run validates integration, authentication, usage reporting, source extraction, output schema and artifact writing. It is not benchmark data. Formal paired comparisons, a question set, blind evaluation and comparative claims remain gated on the later benchmark protocol. A result is eligible for later evaluation only when status is `COMPLETED`, the exact question/scope and code references are recorded, and all budget fields are present.
