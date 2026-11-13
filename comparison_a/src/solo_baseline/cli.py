@@ -13,7 +13,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     research = sub.add_parser("research")
     research.add_argument("question")
-    research.add_argument("--scope", default="")
+    research.add_argument("--scope", default="Investigar a pergunta sem expandir além do necessário.")
     research.add_argument("--live", action="store_true")
     research.add_argument("--max-tokens", type=int)
     research.add_argument("--max-searches", type=int)
