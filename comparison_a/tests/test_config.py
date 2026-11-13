@@ -61,3 +61,13 @@ def test_manual_settings_cannot_override_official_provider_boundary(base_url):
 def test_api_key_cannot_contain_header_control_characters():
     with pytest.raises(ValueError):
         Settings("secret\r\nX-Injected: true")
+
+
+@pytest.mark.parametrize("name,value", [
+    ("RAVE_MODEL", "gpt-4.1"),
+    ("RAVE_SEARCH_MODEL", "gpt-5-search-preview"),
+])
+def test_comparison_models_cannot_drift_through_environment(monkeypatch, name, value):
+    monkeypatch.setenv(name, value)
+    with pytest.raises(ValueError, match="pinned"):
+        Settings.from_env()
