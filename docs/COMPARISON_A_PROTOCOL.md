@@ -13,9 +13,9 @@ The HTTP client follows the frozen RAVE retry policy: at most three attempts; re
 ## Pilot limits
 
 The initial live integration pilot is limited to one run with:
-- 40,000 total reserved/observed tokens
+- 80,000 total reserved/observed tokens
 - 3 search attempts, including retries
-- 5 total model-call attempts, including retries and JSON repair
+- 12 total model-call attempts, including retries and JSON repair
 - 180 seconds wall time
 - USD 0.50 estimated cost ceiling
 
