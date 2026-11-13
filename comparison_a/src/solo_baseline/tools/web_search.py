@@ -26,7 +26,8 @@ class OpenAIHostedSearch:
             started = time.monotonic()
             req = urllib.request.Request(endpoint, data=body, headers={"Authorization": f"Bearer {self.settings.api_key}", "Content-Type": "application/json"})
             try:
-                with urllib.request.urlopen(req, timeout=self.settings.timeout_seconds) as resp:
+                timeout = min(self.settings.timeout_seconds, max(0.001, self.budget.remaining()["seconds"]))
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                 if "error" in data or not data.get("choices"):
                     raise RuntimeError("Search provider returned an invalid response")

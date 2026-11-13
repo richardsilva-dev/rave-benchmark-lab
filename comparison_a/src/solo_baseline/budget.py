@@ -51,6 +51,8 @@ class BudgetController:
             self.estimated_cost_usd = (self.estimated_cost_usd or 0.0) + cost_usd
 
     def check_after_call(self) -> None:
+        if time.monotonic() - self.started > self.limits.max_seconds:
+            raise BudgetExceeded("time_limit_reached_during_call")
         if self.tokens > self.limits.max_tokens:
             raise BudgetExceeded("token_limit_reached_after_call")
         if self.limits.max_cost_usd is not None and self.estimated_cost_usd is not None and self.estimated_cost_usd > self.limits.max_cost_usd:

@@ -24,8 +24,13 @@ class SoloResearchAgent:
         req = urllib.request.Request(self.settings.base_url + "/chat/completions", data=json.dumps(payload).encode(),
                                      headers={"Authorization": f"Bearer {self.settings.api_key}", "Content-Type": "application/json"})
         started = time.monotonic()
-        with urllib.request.urlopen(req, timeout=self.settings.timeout_seconds) as resp:
-            data = json.loads(resp.read().decode())
+        try:
+            timeout=min(self.settings.timeout_seconds,max(0.001,self.budget.remaining()["seconds"]))
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode())
+        except Exception as exc:
+            self.telemetry.calls.append({"kind":"analysis","status":"FAILED","duration_seconds":time.monotonic()-started,"attempt":1,"input_tokens":None,"output_tokens":None,"cost_usd":None,"error":type(exc).__name__})
+            raise
         msg = data.get("choices", [{}])[0].get("message", {})
         usage = data.get("usage", {})
         pt, ct = int(usage.get("prompt_tokens", 0)), int(usage.get("completion_tokens", 0))
