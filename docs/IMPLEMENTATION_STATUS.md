@@ -61,3 +61,26 @@ No external candidate has been installed or executed. No real API request has be
 ## Stop point before the definitive benchmark protocol
 
 The next formal stage is the definitive benchmark protocol: official question set, fixed repetitions, objective evaluation rubric, blind evaluation procedure and statistical analysis plan. This stage has not started. Stop and notify the user for approval before creating any of those materials or collecting benchmark results.
+
+
+## Final gate review — 2026-11-13 (after user requested all recommendations be applied)
+
+This section is the current release decision and supersedes any wording above that could be read as approval to start the official benchmark.
+
+### Comparison A
+- Current reviewed branch head: `463d312619fb086ed5e4772672f3233c444c9119`.
+- GitHub Actions runs `43449538522` and `43449549687` completed successfully on this exact head.
+- The recorded CI scope is 60 pytest tests, 10 offline security smoke checks, and parsing of 3 shared JSON Schemas. CI did not exercise a live provider call and cannot validate the user's local API credential.
+- **Decision:** eligible for one capped, user-initiated live integration probe only. Not yet eligible for official benchmark runs until a successful probe produces schema-valid result and metadata artifacts and actual provider usage is reconciled.
+
+### Comparison B — Local Deep Research
+- Fork branch: `rave-benchmark-hardened-solo`, head `ba68db827e0430a7e8b15c9af62918482049b805`; PR #1 remains draft.
+- The lock still contains `unstructured==0.18.32`, affected by GHSA-4mvj-m6j5-pmf7 / CVE-2026-71428. The repository documents that a fixed release currently cannot be locked for its supported Python 3.14 target. A static source tripwire is compensating evidence only; it does not remove the vulnerable dependency.
+- The solo-mode flag is wired into the LangGraph strategy and controls whether `research_subtopic` is added. Existing benchmark-solo tests exercise the resolver helper, not a full end-to-end run proving one researcher, no child tasks, and the actual final tool list under production configuration.
+- No benchmark-specific enforced upload-disable boundary, reproducible OS/container egress policy with deny tests, or CI run on the fork branch has been demonstrated in this review.
+- **Decision:** do not install or execute B. These are hard blockers, not accepted risks.
+
+### Official benchmark release gate
+- No official benchmark questions, paired runs, blinded scoring, statistical analysis, or performance claims are authorized by these preparatory checks.
+- Keep both PRs in draft. Do not merge either branch into its default branch as a substitute for passing the gates.
+- Next safe action: run only the capped Comparison A integration probe locally; separately complete B's dependency and isolation gates before any installation or execution.
