@@ -8,6 +8,8 @@ Can RAVE's collective architecture produce better research results than one agen
 
 Use `gpt-4.1-mini` for analysis and, when technically compatible, `gpt-5-search-api` via OpenAI Chat Completions web search as observed in frozen RAVE. The RAVE search component returns provider annotations; this implementation preserves those citations distinctly from model-written URLs. Search call count and any differences in prompting/search context remain explicit confounds. No alternate provider may be silently substituted.
 
+The shared HTTP client follows the frozen RAVE retry policy: at most three attempts; retries only provider-classified HTTP 429 rate limits; honors `Retry-After` and token-reset headers up to 420 seconds, otherwise uses 1s then 2s; no retries for quota errors, server errors, or timeouts. Each attempt reserves budget and is logged. This policy was checked against the frozen RAVE implementation at the pinned commit.
+
 ## Loop
 
 The solo agent plans a query, performs one bounded search, analyzes results and gaps, and may repeat sequentially while budget remains. It synthesizes only after the loop ends, validates structured output and source URLs, and marks exhausted/incomplete runs `PARTIAL`, never `COMPLETED`. Web page contents are not fetched by default: the frozen RAVE search tool exposes provider annotations and summarized result content. The safe page reader is an independently controlled capability for compatible providers and must not be represented as RAVE-equivalent without protocol changes.

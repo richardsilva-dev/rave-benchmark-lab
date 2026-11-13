@@ -2,11 +2,15 @@
   "bind_host": "127.0.0.1",
   "enable_remote_tracing": false,
   "enable_mcp": false,
-  "interactive_clarification": false,
-  "allowed_tools": ["web_search", "public_page_read"],
-  "models": {
-    "analysis": "gpt-4.1-mini",
-    "search": "gpt-5-search-api"
+  "configurable": {
+    "allow_clarification": false,
+    "search_api": "openai",
+    "research_model": "openai:gpt-4.1-mini",
+    "summarization_model": "openai:gpt-4.1-mini",
+    "compression_model": "openai:gpt-4.1-mini",
+    "final_report_model": "openai:gpt-4.1-mini",
+    "mcp_config": null,
+    "mcp_prompt": null
   },
-  "note": "Example intent only. Confirm exact field names and support in the pinned upstream checkout; do not assume these keys are consumed."
+  "note": "Configuration field names verified in the pinned source. OpenAI web_search_preview is not identical to RAVE gpt-5-search-api Chat Completions; record this as a confound. No run budgets are set in this stage."
 }

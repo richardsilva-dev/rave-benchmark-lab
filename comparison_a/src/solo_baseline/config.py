@@ -1,6 +1,18 @@
 from dataclasses import dataclass
 import os
+from pathlib import Path
 from urllib.parse import urlsplit
+
+
+def _load_dotenv(path: str = ".env") -> None:
+    """Load simple KEY=VALUE entries without overriding the process environment."""
+    file=Path(path)
+    if not file.is_file(): return
+    for line in file.read_text(encoding="utf-8").splitlines():
+        line=line.strip()
+        if not line or line.startswith("#") or "=" not in line: continue
+        key,value=line.split("=",1)
+        os.environ.setdefault(key.strip(),value.strip().strip("\"'").strip())
 
 
 @dataclass(frozen=True)
@@ -15,6 +27,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        _load_dotenv()
         try:
             timeout = int(os.getenv("RAVE_TIMEOUT_SECONDS", "90"))
             max_out = int(os.getenv("RAVE_SEARCH_MAX_OUTPUT_TOKENS", "512"))
