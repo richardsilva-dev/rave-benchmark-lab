@@ -94,6 +94,9 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
     """Perform one logical API call, logging and budgeting every HTTP attempt."""
     if not settings.api_key:
         raise RuntimeError("RAVE_API_KEY is missing")
+    expected_model = settings.search_model if kind == "search" else settings.analysis_model if kind == "analysis" else None
+    if expected_model is None or payload.get("model") != expected_model:
+        raise ValueError("Provider request model does not match the frozen comparison configuration")
     output_cap = payload.get("max_completion_tokens")
     if not isinstance(output_cap, int) or isinstance(output_cap, bool) or output_cap <= 0:
         raise ValueError("Every provider request must declare a positive max_completion_tokens cap")
