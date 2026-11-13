@@ -19,10 +19,11 @@ def main():
     research.add_argument("--max-searches", type=int)
     research.add_argument("--max-seconds", type=float)
     research.add_argument("--max-cost-usd", type=float)
+    research.add_argument("--max-model-calls", type=int)
     args = parser.parse_args()
     if not args.live:
         parser.error("No API calls are made unless --live is explicit")
-    if not all(value is not None for value in (args.max_tokens, args.max_searches, args.max_seconds, args.max_cost_usd)):
+    if not all(value is not None for value in (args.max_tokens, args.max_searches, args.max_seconds, args.max_cost_usd, args.max_model_calls)):
         parser.error("Live mode requires explicit --max-tokens, --max-searches, --max-seconds and --max-cost-usd")
     if args.max_cost_usd > MAX_ALLOWED_RUN_COST_USD:
         parser.error(f"Initial benchmark policy caps each live run at US${MAX_ALLOWED_RUN_COST_USD:.2f}; lower --max-cost-usd")
@@ -35,7 +36,7 @@ def main():
         parser.error(str(exc))
     if settings.analysis_model not in rates or settings.search_model not in rates:
         parser.error("No configured price schedule exists for both models; refusing live execution")
-    budget = BudgetController(Limits(args.max_tokens, args.max_searches, args.max_seconds, args.max_cost_usd))
+    budget = BudgetController(Limits(args.max_tokens, args.max_searches, args.max_seconds, args.max_cost_usd, args.max_model_calls))
     request = {"schema_version": "1.0", "request_id": "req-" + uuid.uuid4().hex[:12],
                "question": args.question, "scope": args.scope, "constraints": []}
     result, metadata = SoloResearchAgent(settings, budget).run(request)
@@ -47,7 +48,7 @@ def main():
         "system_id": "solo_baseline", "request_id": request["request_id"],
         "budget_remaining": budget.remaining(), "tokens_total": budget.tokens,
         "budget_limits": {"max_tokens": args.max_tokens, "max_searches": args.max_searches,
-                          "max_seconds": args.max_seconds, "max_cost_usd": args.max_cost_usd},
+                          "max_seconds": args.max_seconds, "max_cost_usd": args.max_cost_usd,\n                          "max_model_calls": args.max_model_calls},
         "pricing_version": PRICE_VERSION, "pricing_rates_usd_per_1m": rates,
         "web_search_fee_usd_per_call": WEB_SEARCH_USD_PER_CALL,
         "max_allowed_run_cost_usd": MAX_ALLOWED_RUN_COST_USD,
