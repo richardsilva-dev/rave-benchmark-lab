@@ -84,3 +84,18 @@ def test_unknown_model_price_fails_before_http():
         with pytest.raises(BudgetExceeded):
             post_chat_completion(settings, budget, telemetry, "analysis", payload)
     call.assert_not_called()
+
+
+def test_authentication_rejection_releases_reserved_tokens_and_cost():
+    settings, budget, telemetry, payload = setup_client()
+    exc = urllib.error.HTTPError("https://api.openai.com/v1/chat/completions", 401, "unauthorized", {},
+                                 io.BytesIO(json.dumps({"error": {"type": "invalid_request_error",
+                                                                    "code": "invalid_api_key"}}).encode()))
+    with patch("solo_baseline.http_client.urllib.request.urlopen", side_effect=exc) as call:
+        with pytest.raises(RuntimeError, match="HTTP 401"):
+            post_chat_completion(settings, budget, telemetry, "analysis", payload)
+    assert call.call_count == 1
+    assert budget.reserved_tokens == 0
+    assert budget.reserved_cost_usd == 0
+    assert budget.calls == 1
+    assert telemetry.calls[0]["budget_reservation_retained"] is False
