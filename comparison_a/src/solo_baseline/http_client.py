@@ -1,6 +1,7 @@
 """Shared OpenAI Chat Completions transport matching the frozen RAVE retry policy."""
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+import http.client
 import json
 import re
 import time
@@ -99,6 +100,10 @@ def post_chat_completion(settings,budget,telemetry,kind,payload):
             telemetry.calls.append({"kind":kind,"status":"FAILED","duration_seconds":time.monotonic()-started,"attempt":attempt,
                                     "input_tokens":None,"output_tokens":None,"cost_usd":None,"error":"TimeoutError"})
             raise TimeoutError("LLM request timed out") from exc
+        except (OSError,http.client.HTTPException) as exc:
+            telemetry.calls.append({"kind":kind,"status":"FAILED","duration_seconds":time.monotonic()-started,"attempt":attempt,
+                                    "input_tokens":None,"output_tokens":None,"cost_usd":None,"error":type(exc).__name__})
+            raise RuntimeError("Could not reach LLM provider") from exc
         except BudgetExceeded:
             raise
         except (UnicodeDecodeError,json.JSONDecodeError,KeyError,IndexError,TypeError,ValueError,RuntimeError) as exc:

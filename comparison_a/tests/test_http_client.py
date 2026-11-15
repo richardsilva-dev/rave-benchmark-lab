@@ -53,3 +53,13 @@ def test_timeout_is_logged_once_without_retry():
         with pytest.raises(TimeoutError): post_chat_completion(settings,budget,telemetry,"analysis",payload)
     assert call.call_count==1 and telemetry.calls[0]["status"]=="FAILED"
     assert "private details" not in str(telemetry.calls)
+
+
+def test_connection_reset_during_read_is_recorded_and_wrapped():
+    settings,budget,telemetry,payload=setup_client()
+    class ResetResponse(FakeResponse):
+        def read(self): raise ConnectionResetError("reset")
+    with patch("solo_baseline.http_client.urllib.request.urlopen",return_value=ResetResponse({})):
+        with pytest.raises(RuntimeError,match="Could not reach LLM provider"):
+            post_chat_completion(settings,budget,telemetry,"analysis",payload)
+    assert [(x["status"],x["error"]) for x in telemetry.calls]==[("FAILED","ConnectionResetError")]
