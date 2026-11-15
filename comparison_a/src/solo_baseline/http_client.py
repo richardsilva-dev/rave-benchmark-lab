@@ -114,9 +114,14 @@ def post_chat_completion(settings, budget, telemetry, kind, payload):
             if retry_after is not None:
                 details.append(f"retry_after={retry_after:g}s")
             suffix = f" ({', '.join(details)})" if details else ""
+            # Authentication/authorization rejection is definitive: no model/search
+            # work was accepted, so release token/cost reservation. Keep the attempt
+            # counters consumed to prevent credential-failure retry loops.
+            if exc.code in {401, 403}:
+                budget.release_reservation(reservation)
             telemetry.calls.append({"kind": kind, "status": "FAILED", "duration_seconds": time.monotonic() - started,
                 "attempt": attempt, "input_tokens": None, "output_tokens": None, "cost_usd": None,
-                "error": f"HTTP {exc.code}", "budget_reservation_retained": True})
+                "error": f"HTTP {exc.code}", "budget_reservation_retained": exc.code not in {401, 403}})
             if transient and attempt < 3:
                 delay = retry_after if retry_after is not None else 2 ** (attempt - 1)
                 if delay <= 420:
