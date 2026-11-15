@@ -59,6 +59,12 @@ class BudgetController:
         self.reserved_cost_usd += estimated_cost_usd
         return token_reservation, estimated_cost_usd
 
+    def release_reservation(self, reservation: tuple[int, float]) -> None:
+        """Release a reservation only when the provider definitively rejected the request."""
+        reserved_tokens, reserved_cost = reservation
+        self.reserved_tokens = max(0, self.reserved_tokens - reserved_tokens)
+        self.reserved_cost_usd = max(0.0, self.reserved_cost_usd - reserved_cost)
+
     def record_usage(self, input_tokens: int, output_tokens: int, reservation: tuple[int, float],
                      actual_cost_usd: float) -> None:
         if input_tokens < 0 or output_tokens < 0 or actual_cost_usd < 0:
