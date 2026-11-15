@@ -50,8 +50,9 @@ def main():
         "budget_limits": {"max_tokens": args.max_tokens, "max_searches": args.max_searches,
                           "max_seconds": args.max_seconds, "max_cost_usd": args.max_cost_usd,
                           "max_model_calls": args.max_model_calls},
-        "pricing_version": PRICE_VERSION, "pricing_rates_usd_per_1m": rates,\n        "pricing_source": "user-configured local .env; verify against the applicable OpenAI billing record",
-        "web_search_fee_usd_per_call": WEB_SEARCH_USD_PER_CALL,
+        "pricing_version": PRICE_VERSION,
+        "pricing_rates_usd_per_1m": rates,
+        "pricing_source": "user-configured local .env; verify against the applicable OpenAI billing record",
         "max_allowed_run_cost_usd": MAX_ALLOWED_RUN_COST_USD,
         "search_input_reservation_tokens": settings.search_input_reserve_tokens,
         "budget_note": "Preflight reserves UTF-8 prompt bytes, max completion tokens and the configured hosted-search context allowance. Provider-side search context is variable and may exceed the allowance. GPT-5 Search API token rates are user-configured because no distinct official rate row is published. The local USD 0.50 ceiling is an estimate, not a provider-enforced billing cap; retain account/project spend limits."
