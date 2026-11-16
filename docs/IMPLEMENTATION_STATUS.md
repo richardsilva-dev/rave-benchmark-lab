@@ -44,7 +44,7 @@ From a clean, synchronized local clone of `rave-benchmark-lab`, with a valid key
 uv run --project comparison_a --locked --extra dev python scripts/run_rave_pilot.py --live
 ```
 
-The runner verifies the lab checkout is clean, prepares the exact RAVE candidate commit, checks authentication, runs Comparison A first, and does not launch RAVE if A fails. It then runs RAVE with the same question and scope. It saves local-only artifacts under ignored `artifacts/runs/` and `artifacts/pairs/`, including blinded responses and a separate system key.
+The runner verifies the lab checkout is clean, prepares the exact RAVE candidate commit, checks authentication, runs Comparison A first, and does not launch RAVE if A fails. It then runs RAVE with the same question and scope. It saves local-only artifacts under ignored `artifacts/runs/` and `artifacts/pairs/`, including randomly ordered blinded responses with a normalized schema and a separate system key. Give evaluators only `blind_responses.json`; keep `system_key.json` sealed until scoring is complete.
 
 ## Interpretation and remaining research
 
