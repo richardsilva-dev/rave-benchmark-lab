@@ -308,8 +308,8 @@ def main() -> int:
         rave_final = rave_payload.get("final_output", rave_output.get("final_output", {}))
         rave_answer = compose_rave_answer(rave_final) if isinstance(rave_final, dict) else ""
         integration = rave_payload.get("integration", {})
-        rave_sources = integration.get("web_sources", [])
-        rave_model_refs = integration.get("model_reported_references", [])
+        rave_sources = integration.get("web_sources", []) or []
+        rave_model_refs = integration.get("model_reported_references", []) or []
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
 
         normalized_rave_sources = normalize_rave_sources(rave_sources, rave_model_refs)
