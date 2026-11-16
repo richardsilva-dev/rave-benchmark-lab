@@ -32,7 +32,7 @@ Com o artefato local `artifacts/runs/solo-5b3dc0590dfc` presente e `comparison_a
 python scripts/run_rave_pilot.py --live
 ```
 
-O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git.
+O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git. O arquivo `blind_responses.json` contém as duas respostas sem identificar os sistemas; `system_key.json` guarda o mapeamento separado para permitir avaliação cega. Não envie a chave do sistema junto com as respostas antes da avaliação.
 
 ## Status GitHub
 
