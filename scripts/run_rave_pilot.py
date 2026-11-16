@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 LAB_ROOT = Path(__file__).resolve().parents[1]
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-global-budget-guard"
-RAVE_COMMIT = "3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b"
+RAVE_COMMIT = "4dede5229fb5efc6aa7872fc9c4969e05b43d599"
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
     "max_tokens": 80000,
@@ -177,9 +177,21 @@ def ensure_rave_checkout(target: Path) -> Path:
     return target
 
 
+def build_baseline_command(question: str, scope: str) -> list[str]:
+    return [
+        "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
+        "solo-baseline", "research", question, "--scope", scope, "--live",
+        "--max-tokens", str(BUDGET["max_tokens"]),
+        "--max-searches", str(BUDGET["max_searches"]),
+        "--max-model-calls", str(BUDGET["max_model_calls"]),
+        "--max-seconds", str(BUDGET["max_seconds"]),
+        "--max-cost-usd", str(BUDGET["max_cost_usd"]),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run the RAVE Hive pilot against the preserved Comparison A result."
+        description="Run a fresh, budget-matched Comparison A and RAVE pilot pair."
     )
     parser.add_argument("--live", action="store_true", help="Required opt-in for paid API requests")
     parser.add_argument("--question", default="Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências.")
@@ -203,15 +215,9 @@ def main() -> int:
         child_env["RAVE_OUTPUT_DIR"] = str(rave_path / "data" / "runs")
         check_api_auth(child_env["RAVE_BASE_URL"], child_env["RAVE_API_KEY"])
 
-        baseline_command = [
-            "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
-            "solo-baseline", "research", args.question, "--scope", args.scope, "--live",
-            "--max-tokens", str(BUDGET["max_tokens"]),
-            "--max-searches", str(BUDGET["max_searches"]),
-            "--max-model-calls", str(BUDGET["max_model_calls"]),
-            "--max-seconds", str(BUDGET["max_seconds"]),
-            "--max-cost-usd", str(BUDGET["max_cost_usd"]),
-        ]
+        if run_git(["status", "--porcelain"], LAB_ROOT):
+            raise RuntimeError("The lab checkout has uncommitted changes; refusing to run an unpinned baseline.")
+        baseline_command = build_baseline_command(args.question, args.scope)
         baseline_run = subprocess.run(
             baseline_command, cwd=LAB_ROOT, env=child_env, capture_output=True, text=True,
             encoding="utf-8", timeout=300,
