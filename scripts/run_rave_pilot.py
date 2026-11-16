@@ -82,8 +82,9 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
         raise ValueError("RAVE_API_KEY is missing from comparison_a/.env")
     base_url = env.get("RAVE_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
     parsed = urlsplit(base_url)
-    if parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.username or parsed.password:
-        raise ValueError("RAVE_BASE_URL must be https://api.openai.com/v1")
+    if (parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.port not in (None, 443)
+            or parsed.path.rstrip("/") != "/v1" or parsed.username or parsed.password or parsed.query or parsed.fragment):
+        raise ValueError("RAVE_BASE_URL must be exactly https://api.openai.com/v1")
     for name in ("RAVE_SEARCH_INPUT_USD_PER_1M", "RAVE_SEARCH_OUTPUT_USD_PER_1M"):
         try:
             rate = float(env.get(name, ""))
@@ -118,14 +119,29 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
     return env
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    handler_order = 100
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_preflight(request, timeout):
+    opener = urllib.request.build_opener(_NoRedirectHandler())
+    return opener.open(request, timeout=timeout)
+
+
 def check_api_auth(base_url: str, api_key: str) -> None:
+    parsed = urlsplit(base_url)
+    if parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.path.rstrip("/") != "/v1":
+        raise ValueError("Refusing to send an API key to an untrusted base URL")
     request = urllib.request.Request(
-        f"{base_url.rstrip('/')}/models",
+        "https://api.openai.com/v1/models",
         headers={"Authorization": f"Bearer {api_key}"},
         method="GET",
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with _open_preflight(request, timeout=20) as response:
             if response.status != 200:
                 raise RuntimeError(f"OpenAI authentication preflight returned HTTP {response.status}")
             response.read(1024)
