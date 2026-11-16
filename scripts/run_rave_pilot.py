@@ -59,6 +59,10 @@ def validate_baseline(run_id: str) -> tuple[dict, dict, Path]:
         raise ValueError("The baseline analysis model does not match the RAVE pilot profile")
     if metadata.get("search_model") != "gpt-5-search-api":
         raise ValueError("The baseline search model does not match the RAVE pilot profile")
+    if metadata.get("search_provider") != "openai_hosted_web_search":
+        raise ValueError("The baseline search provider does not match the RAVE pilot profile")
+    if int(metadata.get("search_input_reservation_tokens", 0)) != BUDGET["search_input_reserve_tokens"]:
+        raise ValueError("Baseline hosted-search input reservation does not match the RAVE pilot profile")
     limits = metadata.get("budget_limits", {})
     for key, expected in BUDGET.items():
         if key == "search_input_reserve_tokens":
