@@ -189,18 +189,6 @@ def compose_rave_answer(final_output: dict) -> str:
     )
 
 
-def build_baseline_command(question: str, scope: str) -> list[str]:
-    return [
-        "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
-        "solo-baseline", "research", question, "--scope", scope, "--live",
-        "--max-tokens", str(BUDGET["max_tokens"]),
-        "--max-searches", str(BUDGET["max_searches"]),
-        "--max-model-calls", str(BUDGET["max_model_calls"]),
-        "--max-seconds", str(BUDGET["max_seconds"]),
-        "--max-cost-usd", str(BUDGET["max_cost_usd"]),
-    ]
-
-
 def build_blinded_responses(baseline: dict, rave: dict, order: tuple[str, str] | None = None):
     systems = [
         ("solo_baseline", baseline),
