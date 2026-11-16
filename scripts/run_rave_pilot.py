@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 LAB_ROOT = Path(__file__).resolve().parents[1]
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-global-budget-guard"
-RAVE_COMMIT = "bf107f1b72ec7723ec586308532bde10f134af97"
+RAVE_COMMIT = "7a0032bd81528aa8f69b5beb0f9771b8fc455689"
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
     "max_tokens": 80000,
@@ -177,6 +177,14 @@ def ensure_rave_checkout(target: Path) -> Path:
     return target
 
 
+def compose_rave_answer(final_output: dict) -> str:
+    fields = ("executive_answer", "integrated_analysis", "collective_integration", "conclusions")
+    return "\\n\\n".join(
+        value.strip() for key in fields
+        if isinstance((value := final_output.get(key)), str) and value.strip()
+    )
+
+
 def build_baseline_command(question: str, scope: str) -> list[str]:
     return [
         "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
@@ -284,7 +292,7 @@ def main() -> int:
         rave_meta = rave_payload.get("metadata", rave_output.get("metadata", {}))
         rave_status = rave_payload.get("execution_status", rave_output.get("execution_status", "INVALID"))
         rave_final = rave_payload.get("final_output", rave_output.get("final_output", {}))
-        rave_answer = rave_final.get("executive_answer", "") if isinstance(rave_final, dict) else ""
+        rave_answer = compose_rave_answer(rave_final) if isinstance(rave_final, dict) else ""
         rave_sources = rave_payload.get("integration", {}).get("web_sources", [])
         rave_model_refs = rave_payload.get("integration", {}).get("model_reported_references", [])
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
