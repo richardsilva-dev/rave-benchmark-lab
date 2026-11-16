@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 LAB_ROOT = Path(__file__).resolve().parents[1]
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
-RAVE_BRANCH = "benchmark-a-global-budget-guard"
+RAVE_BRANCH = "benchmark-a-current-hive-budget-guard"
 RAVE_COMMIT = "7a0032bd81528aa8f69b5beb0f9771b8fc455689"
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
