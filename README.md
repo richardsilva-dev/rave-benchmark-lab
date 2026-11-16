@@ -41,12 +41,12 @@ Repositório remoto privado ativo. A branch `comparison-a-budget-and-methodology
 
 ## Paired RAVE pilot
 
-After the RAVE candidate and Comparison A branches are merged and the local checkouts are synchronized, prepare the ignored `comparison_a/.env` using `comparison_a/.env.example`. Keep `RAVE_API_KEY` private. Then run the paired pilot explicitly:
+Prepare the ignored `comparison_a/.env` using `comparison_a/.env.example` and keep `RAVE_API_KEY` private. The preserved A artifact `solo-5b3dc0590dfc` must exist locally. Then run the pilot explicitly:
 
 ```powershell
-uv run --project comparison_a --locked --extra dev python scripts/run_rave_pilot.py --live
+python scripts/run_rave_pilot.py --live
 ```
 
-The runner performs a non-billable authentication preflight before paid research, generates a fresh solo run, then a RAVE Hive run with the same question, scope, model mapping and run-wide caps. It stops safely on authentication, budget, or incomplete-result failures. Artifacts are written under ignored `artifacts/runs/` and `artifacts/pairs/`; do not commit them without a privacy/secrets review.
+The runner reuses the completed A artifact without rerunning or modifying it, performs a non-billable `GET /models` authentication preflight, then executes only the pinned RAVE Hive candidate with the same question, scope, model mapping and run-wide budget. An HTTP 401/403 stops before paid research. Artifacts are written under ignored `artifacts/pairs/`; do not commit them without a privacy/secrets review.
 
-Each system has its own USD 0.50 estimated cap, so the pair may consume up to USD 1.00 in total. Keep an independent OpenAI project spend limit enabled. The GPT-5 Search API token rates in the example configuration are the user-configured values from the prior pilot (USD 1.25 input / USD 10.00 output per million tokens); verify them against the applicable billing record before the live run.
+The historical A run already incurred approximately USD 0.06093635. The new RAVE run has a separate local estimated ceiling of USD 0.50, so the maximum estimated total for this preserved pair is approximately USD 0.56093635, not USD 1.00. This is not a provider-enforced billing cap; keep an independent OpenAI project spend limit enabled. GPT-5 Search API token rates remain user-configured (USD 1.25 input / USD 10.00 output per million tokens) and must be verified against the applicable billing record.
