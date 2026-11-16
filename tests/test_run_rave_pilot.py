@@ -26,7 +26,7 @@ def test_build_child_env_maps_comparison_a_names_to_rave_settings():
     env = pilot.build_child_env(values)
     assert env["RAVE_WEB_SEARCH_MODEL"] == "gpt-5-search-api"
     assert env["RAVE_WEB_SEARCH_CONTEXT_SIZE"] == "low"
-    assert env["RAVE_ANALYSIS_MAX_OUTPUT_TOKENS"] == "4096"
+    assert env["RAVE_ANALYSIS_MAX_OUTPUT_TOKENS"] == "8192"
     assert env["RAVE_SYNTHESIS_MAX_OUTPUT_TOKENS"] == "8192"
     assert env["RAVE_MAX_RUN_TOKENS"] == "80000"
 
@@ -58,3 +58,16 @@ def test_validate_baseline_rejects_non_completed_run(tmp_path, monkeypatch):
     (run_dir / "result.json").write_text(json.dumps({"status": "FAILED"}), encoding="utf-8")
     with pytest.raises(ValueError, match="not COMPLETED"):
         pilot.validate_baseline("run-1")
+
+
+
+def test_paired_pilot_builds_fresh_baseline_with_full_shared_budget():
+    command = pilot.build_baseline_command("same question", "same scope")
+    assert command[command.index("research") + 1] == "same question"
+    assert command[command.index("--scope") + 1] == "same scope"
+    assert command[command.index("--max-tokens") + 1] == "80000"
+    assert command[command.index("--max-searches") + 1] == "3"
+    assert command[command.index("--max-model-calls") + 1] == "12"
+    assert command[command.index("--max-seconds") + 1] == "180"
+    assert command[command.index("--max-cost-usd") + 1] == "0.5"
+    assert "--live" in command
