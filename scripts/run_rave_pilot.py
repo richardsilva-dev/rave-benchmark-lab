@@ -323,9 +323,9 @@ def main() -> int:
         rave_status = rave_payload.get("execution_status", rave_output.get("execution_status", "INVALID"))
         rave_final = rave_payload.get("final_output", rave_output.get("final_output", {}))
         rave_answer = compose_rave_answer(rave_final) if isinstance(rave_final, dict) else ""
-        rave_sources = rave_payload.get("integration", {}).get("web_sources", [])
-        rave_model_refs = rave_payload.get("integration", {}).get("model_reported_references", [])
-        rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
+        rave_sources = rave_payload.get("integration", {}).get("web_sources", []) or []
+        rave_model_refs = rave_payload.get("integration", {}).get("model_reported_references", []) or []
+        rave_limitations = (rave_final.get("gaps_and_limitations", []) or []) if isinstance(rave_final, dict) else []
         all_rave_sources = list(rave_sources) + list(rave_model_refs)
         blind_responses, system_key = build_blinded_responses(
             baseline_result,
