@@ -115,4 +115,4 @@ def test_compose_rave_answer_keeps_all_comparable_final_sections():
         "conclusions": "Conclusion",
         "gaps_and_limitations": ["Not part of answer body"],
     })
-    assert answer == "Executive\\n\\nAnalysis\\n\\nCollective\\n\\nConclusion"
+    assert answer == "Executive\n\nAnalysis\n\nCollective\n\nConclusion"
