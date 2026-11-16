@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import shutil
+import secrets
 import subprocess
 import sys
 import urllib.error
@@ -177,6 +178,35 @@ def ensure_rave_checkout(target: Path) -> Path:
     return target
 
 
+
+def build_blinded_responses(baseline: dict, rave: dict, order=None):
+    systems = {
+        "solo_baseline": {
+            "answer": baseline.get("answer", ""),
+            "sources": baseline.get("sources", []),
+            "limitations": baseline.get("limitations", []),
+        },
+        "rave_hive": {
+            "answer": rave.get("answer", ""),
+            "sources": rave.get("sources", []),
+            "limitations": rave.get("limitations", []),
+        },
+    }
+    if order is None:
+        order = secrets.choice([
+            ("solo_baseline", "rave_hive"),
+            ("rave_hive", "solo_baseline"),
+        ])
+    if len(order) != 2 or set(order) != set(systems):
+        raise ValueError("Blind response order must contain each system exactly once")
+    responses, key = [], {}
+    for index, system_id in enumerate(order, start=1):
+        response_id = f"response_{index:02d}"
+        responses.append({"response_id": response_id, **systems[system_id]})
+        key[response_id] = system_id
+    return responses, key
+
+
 def compose_rave_answer(final_output: dict) -> str:
     fields = ("executive_answer", "integrated_analysis", "collective_integration", "conclusions")
     return "\\n\\n".join(
@@ -296,27 +326,16 @@ def main() -> int:
         rave_sources = rave_payload.get("integration", {}).get("web_sources", [])
         rave_model_refs = rave_payload.get("integration", {}).get("model_reported_references", [])
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
-        blind_responses = [
-            {
-                "response_id": "response_01",
-                "answer": baseline_result["answer"],
-                "sources": baseline_result.get("sources", []),
-                "limitations": baseline_result.get("limitations", []),
-            },
-            {
-                "response_id": "response_02",
-                "answer": rave_answer,
-                "sources": rave_sources,
-                "model_reported_references": rave_model_refs,
-                "limitations": rave_limitations,
-            },
-        ]
+        all_rave_sources = list(rave_sources) + list(rave_model_refs)
+        blind_responses, system_key = build_blinded_responses(
+            baseline_result,
+            {"answer": rave_answer, "sources": all_rave_sources, "limitations": rave_limitations},
+        )
         (pair_dir / "blind_responses.json").write_text(
             json.dumps(blind_responses, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         (pair_dir / "system_key.json").write_text(
-            json.dumps({"response_01": "solo_baseline", "response_02": "rave_hive"}, indent=2),
-            encoding="utf-8"
+            json.dumps(system_key, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         pair_status = (
             "COMPLETED" if completed.returncode == 0 and rave_status == "COMPLETED"
