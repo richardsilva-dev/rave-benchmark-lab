@@ -71,3 +71,14 @@ def test_paired_pilot_builds_fresh_baseline_with_full_shared_budget():
     assert command[command.index("--max-seconds") + 1] == "180"
     assert command[command.index("--max-cost-usd") + 1] == "0.5"
     assert "--live" in command
+
+
+def test_compose_rave_answer_keeps_all_comparable_final_sections():
+    answer = pilot.compose_rave_answer({
+        "executive_answer": "Executive",
+        "integrated_analysis": "Analysis",
+        "collective_integration": "Collective",
+        "conclusions": "Conclusion",
+        "gaps_and_limitations": ["Not part of answer body"],
+    })
+    assert answer == "Executive\\n\\nAnalysis\\n\\nCollective\\n\\nConclusion"
