@@ -29,17 +29,27 @@ The successful solo run is an integration pilot, not a matched benchmark. Before
 
 A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
 - Branch: `benchmark-a-global-budget-guard`
-- Pinned candidate commit: `3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b`
-- Validation: GitHub Actions run `43922045558` completed successfully (26 tests).
+- Candidate commit: `bf107f1b72ec7723ec586308532bde10f134af97`
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
 - Shared search fails closed; no silent fallback to individual agent searches.
-- Agent analysis cap: 4,096 tokens; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
-- JSON code fences on one line, response-read connection failures and refusal of authenticated HTTP redirects now have regression coverage.
+- Agent analysis and JSON-repair output cap: 8,192 tokens; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
+- Search tool fee is estimated at USD 0.01 per call (USD 10 per 1,000 calls), matching Comparison A.
+- A definitive 401/403 releases its token/cost reservation but still counts the failed attempt; timeouts and ambiguous failures retain reservations conservatively.
+- Request timeout is bounded by the remaining run-wide wall-clock budget.
+- The API key is never committed, printed, or included in telemetry.
 
-The candidate branch is not merged into `main` and does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md). The branch is pinned by the lab runner for this pilot.
+The candidate branch remains separate from `main` until its CI checks pass. It does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Next live gate
+## Paired pilot readiness
 
-The lab runner `scripts/run_rave_pilot.py` validates and reuses the completed A artifact `solo-5b3dc0590dfc`, checks the local pricing configuration, performs a non-billable `GET /models` authentication preflight, and only then launches one RAVE Hive run with the same question and scope. It does not rerun or modify Comparison A. An HTTP 401 stops before any paid research request; the only required intervention in that case is replacing the local `RAVE_API_KEY`.
+`scripts/run_rave_pilot.py` now creates a fresh Comparison A run and then a RAVE Hive run with the same question and scope. It no longer reuses the historical `solo-5b3dc0590dfc` artifact as if it were a newly matched baseline.
 
-The run is still a one-question pilot. The historical A artifact does not record its exact source commit, and no blind independent quality scoring has been performed. A completed pair is preliminary evidence only, not proof of general superiority. Comparison B remains blocked by the dependency audit.
+Before sending paid research requests, the runner:
+1. verifies that the lab checkout is clean and records its commit;
+2. prepares the exact RAVE candidate commit and refuses to overwrite a dirty RAVE checkout;
+3. checks the local ignored `comparison_a/.env` configuration and performs a non-billable `GET /models` authentication preflight;
+4. applies the same run-wide caps to both systems: 80,000 tokens, 3 searches, 12 model calls, 180 seconds, and USD 0.50 estimated cost per system;
+5. runs Comparison A first and stops without launching RAVE if A is not `COMPLETED`;
+6. verifies question, scope, model mapping, search price assumptions, and persisted artifacts before creating a pair manifest.
+
+The run is a one-question pilot, not the ten-question protocol. It creates blinded response files and a separate system key, but no blind independent quality scoring has yet been performed. A completed pair is preliminary evidence, not proof of general superiority. Comparison B remains blocked by its dependency audit and must not be installed or launched.
