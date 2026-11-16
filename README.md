@@ -36,6 +36,8 @@ O executor preserva e reutiliza a execução A existente; não a executa novamen
 
 O piloto preserva o custo já incorrido pela execução A (aproximadamente USD 0.06093635) e limita a nova execução RAVE a USD 0.50 estimados. O teto estimado total do par é aproximadamente USD 0.56093635. Esse limite é local, não um bloqueio de cobrança do provedor; mantenha um limite de gastos independente no projeto OpenAI e confirme as tarifas de busca no registro de cobrança.
 
+A direção mais recente no Notion define três condições (A: agente único; B: múltiplos agentes simples com integração básica; C: RAVE completo). Este piloto cobre apenas A versus C; B ainda não foi implementado. Portanto, o resultado será preliminar e não isolará sozinho o ganho específico da cooperação entre agentes. Os critérios de pontuação estão registrados em [docs/EVALUATION_RUBRIC.md](docs/EVALUATION_RUBRIC.md).
+
 ## Status GitHub
 
 Repositório remoto privado ativo. O executor do piloto está incorporado em `main` pelo commit `687a3c597bef2851d282cc929a33bccda8883d0b`. O código RAVE usado no piloto permanece isolado na branch `benchmark-a-current-hive-budget-guard`, fixada no commit `ee45023a64f637e80095e08c4aab56f97d6cc835`.
