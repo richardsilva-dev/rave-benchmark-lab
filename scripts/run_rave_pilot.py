@@ -13,7 +13,6 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 LAB_ROOT = Path(__file__).resolve().parents[1]
-BASELINE_RUN_ID = "solo-5b3dc0590dfc"
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-global-budget-guard"
 RAVE_COMMIT = "3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b"
@@ -103,7 +102,7 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
         "RAVE_TEMPERATURE": "0.2",
         "RAVE_TIMEOUT_SECONDS": "90",
         "RAVE_MAX_CONCURRENT_REQUESTS": "1",
-        "RAVE_ANALYSIS_MAX_OUTPUT_TOKENS": "4096",
+        "RAVE_ANALYSIS_MAX_OUTPUT_TOKENS": "8192",
         "RAVE_SYNTHESIS_MAX_OUTPUT_TOKENS": "8192",
         "RAVE_MAX_RUN_TOKENS": str(BUDGET["max_tokens"]),
         "RAVE_MAX_RUN_SEARCHES": str(BUDGET["max_searches"]),
@@ -183,32 +182,60 @@ def main() -> int:
         description="Run the RAVE Hive pilot against the preserved Comparison A result."
     )
     parser.add_argument("--live", action="store_true", help="Required opt-in for paid API requests")
-    parser.add_argument("--baseline-run-id", default=BASELINE_RUN_ID)
+    parser.add_argument("--question", default="Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências.")
+    parser.add_argument("--scope", default=QUESTION_SCOPE_DEFAULT)
     parser.add_argument("--rave-project-path", default=os.getenv("RAVE_PROJECT_PATH", ""))
     args = parser.parse_args()
     if not args.live:
         parser.error("No API requests are made unless --live is explicitly supplied")
 
     try:
-        baseline_meta, baseline_result, baseline_dir = validate_baseline(args.baseline_run_id)
         dotenv_path = LAB_ROOT / "comparison_a" / ".env"
         if not dotenv_path.is_file():
             raise ValueError("Create comparison_a/.env from comparison_a/.env.example first")
         child_env = build_child_env(parse_dotenv(dotenv_path))
-        search_rates = baseline_meta.get("pricing_rates_usd_per_1m", {}).get("gpt-5-search-api")
-        if not isinstance(search_rates, dict) or "input" not in search_rates or "output" not in search_rates:
-            raise ValueError("The preserved Comparison A run has no complete search pricing record")
-        if float(child_env["RAVE_SEARCH_INPUT_USD_PER_1M"]) != float(search_rates["input"]):
-            raise ValueError("Search input price differs from the preserved Comparison A run")
-        if float(child_env["RAVE_SEARCH_OUTPUT_USD_PER_1M"]) != float(search_rates["output"]):
-            raise ValueError("Search output price differs from the preserved Comparison A run")
-        check_api_auth(child_env["RAVE_BASE_URL"], child_env["RAVE_API_KEY"])
 
+        # Verify the pinned RAVE checkout before any paid request.
         rave_path = Path(args.rave_project_path).expanduser().resolve() if args.rave_project_path else (
             LAB_ROOT / ".cache" / "project_RAVE"
         )
         rave_path = ensure_rave_checkout(rave_path)
         child_env["RAVE_OUTPUT_DIR"] = str(rave_path / "data" / "runs")
+        check_api_auth(child_env["RAVE_BASE_URL"], child_env["RAVE_API_KEY"])
+
+        baseline_command = [
+            "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
+            "solo-baseline", "research", args.question, "--scope", args.scope, "--live",
+            "--max-tokens", str(BUDGET["max_tokens"]),
+            "--max-searches", str(BUDGET["max_searches"]),
+            "--max-model-calls", str(BUDGET["max_model_calls"]),
+            "--max-seconds", str(BUDGET["max_seconds"]),
+            "--max-cost-usd", str(BUDGET["max_cost_usd"]),
+        ]
+        baseline_run = subprocess.run(
+            baseline_command, cwd=LAB_ROOT, env=child_env, capture_output=True, text=True,
+            encoding="utf-8", timeout=300,
+        )
+        try:
+            baseline_summary = json.loads(baseline_run.stdout)
+        except json.JSONDecodeError as exc:
+            detail = baseline_run.stderr[-2000:].strip()
+            raise RuntimeError("Comparison A did not return valid run metadata. " + detail) from exc
+        if baseline_run.returncode != 0 or baseline_summary.get("status") != "COMPLETED":
+            raise RuntimeError("Comparison A did not complete; RAVE was not launched. Inspect its saved run artifact.")
+        baseline_run_id = baseline_summary.get("run_id")
+        if not isinstance(baseline_run_id, str) or not baseline_run_id:
+            raise RuntimeError("Comparison A did not return a run ID")
+        baseline_meta, baseline_result, baseline_dir = validate_baseline(baseline_run_id)
+        if baseline_meta["question"] != args.question or baseline_meta["scope"] != args.scope:
+            raise ValueError("Comparison A artifact does not match the requested question and scope")
+        search_rates = baseline_meta.get("pricing_rates_usd_per_1m", {}).get("gpt-5-search-api")
+        if not isinstance(search_rates, dict) or "input" not in search_rates or "output" not in search_rates:
+            raise ValueError("Comparison A run has no complete search pricing record")
+        if float(child_env["RAVE_SEARCH_INPUT_USD_PER_1M"]) != float(search_rates["input"]):
+            raise ValueError("Search input price differs from the current Comparison A configuration")
+        if float(child_env["RAVE_SEARCH_OUTPUT_USD_PER_1M"]) != float(search_rates["output"]):
+            raise ValueError("Search output price differs from the current Comparison A configuration")
 
         command = [
             "uv", "run", "--project", str(rave_path), "--locked",
@@ -289,7 +316,7 @@ def main() -> int:
             "scope": baseline_meta["scope"],
             "baseline": {
                 "system_id": "solo_baseline",
-                "run_id": args.baseline_run_id,
+                "run_id": baseline_run_id,
                 "artifact_dir": str(baseline_dir.relative_to(LAB_ROOT)),
                 "status": baseline_result["status"],
                 "duration_seconds": baseline_meta.get("duration_seconds"),
@@ -298,7 +325,7 @@ def main() -> int:
                 "sources_count": baseline_meta.get("sources_count"),
                 "analysis_model": baseline_meta.get("analysis_model"),
                 "search_model": baseline_meta.get("search_model"),
-                "code_commit": "not recorded in the historical pilot metadata",
+                "code_commit": run_git(["rev-parse", "HEAD"], LAB_ROOT),
             },
             "rave": {
                 "system_id": "rave_hive",
@@ -321,12 +348,12 @@ def main() -> int:
                 "search_context": "low",
                 "search_output_tokens": 512,
                 "run_budget": BUDGET,
-                "rave_agent_analysis_output_tokens": 4096,
+                "rave_agent_analysis_output_tokens": 8192,
                 "rave_final_synthesis_output_tokens": 8192,
             },
             "limitations": [
                 "This is a one-question pilot, not the ten-question benchmark in the 30-day protocol.",
-                "The historical Comparison A run did not record its exact source commit.",
+                "Both systems were executed from recorded source commits in this paired pilot.",
                 "RAVE uses a different internal allocation of per-call output tokens; the run-wide budget is capped equally.",
                 "No blind independent quality scoring has been performed yet.",
             ],
@@ -337,7 +364,7 @@ def main() -> int:
         summary = {
             "pair_id": pair_id,
             "pair_status": pair_status,
-            "baseline_run_id": args.baseline_run_id,
+            "baseline_run_id": baseline_run_id,
             "rave_run_id": rave_run_id,
             "rave_status": rave_status,
             "artifact_dir": str(pair_dir),
