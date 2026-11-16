@@ -24,6 +24,16 @@ Cada comparação deve usar seu próprio ambiente virtual. A Comparação B usa 
 
 Copie o `.env.example` da comparação desejada para `.env` e preencha localmente. Nunca registre chaves, resultados reais ou dados pessoais. O laboratório não inicia chamadas de API automaticamente.
 
+## Primeiro piloto pareado A × RAVE
+
+Com o artefato local `artifacts/runs/solo-5b3dc0590dfc` presente e `comparison_a/.env` preenchido com uma chave válida e os preços configurados, execute uma única vez:
+
+```powershell
+python scripts/run_rave_pilot.py --live
+```
+
+O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git.
+
 ## Status GitHub
 
 Repositório remoto privado ativo. A branch `comparison-a-budget-and-methodology-hardening` contém as correções e o executor do piloto; os artefatos de execução permanecem locais e são ignorados pelo Git.
