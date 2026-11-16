@@ -237,9 +237,9 @@ def main() -> int:
             json.dumps(rave_output, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-        rave_budget = rave_output.get("run_budget", {})
-        rave_meta = rave_output.get("metadata", {})
-        rave_status = rave_output.get("execution_status", "INVALID")
+        rave_budget = rave_payload.get("run_budget", rave_output.get("run_budget", {}))
+        rave_meta = rave_payload.get("metadata", rave_output.get("metadata", {}))
+        rave_status = rave_payload.get("execution_status", rave_output.get("execution_status", "INVALID"))
         pair_status = "COMPLETED" if completed.returncode == 0 and rave_status == "COMPLETED" else "INELIGIBLE"
         manifest = {
             "schema_version": "1.0",
@@ -268,9 +268,9 @@ def main() -> int:
                 "code_branch": RAVE_BRANCH,
                 "duration_seconds": rave_meta.get("duration_seconds"),
                 "run_budget": rave_budget,
-                "agent_count": len(rave_output.get("agent_results", [])),
-                "message_count": len(rave_output.get("messages", [])),
-                "sources_count": len(rave_output.get("integration", {}).get("web_sources", [])),
+                "agent_count": len(rave_payload.get("agent_results", rave_output.get("agent_results", []))),
+                "message_count": len(rave_payload.get("messages", [])),
+                "sources_count": len(rave_payload.get("integration", {}).get("web_sources", [])),
                 "artifact": "rave_run.json" if (pair_dir / "rave_run.json").exists() else None,
             },
             "shared_profile": {
