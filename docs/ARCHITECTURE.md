@@ -36,8 +36,8 @@ Before any formal run, record exact code refs, Python/uv versions, resolved lock
 ## Candidate RAVE build for the first paired pilot
 
 The frozen reference above remains unchanged. The first live pilot uses a separate candidate build from `project_RAVE`:
-- Branch `benchmark-a-global-budget-guard`
-- Commit `3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b`
-- GitHub Actions: 26 tests passed at run `43922045558`
+- Branch `benchmark-a-current-hive-budget-guard`
+- Commit `ee45023a64f637e80095e08c4aab56f97d6cc835`
+- GitHub Actions: 40 tests passed at run `43923968510`
 
 This candidate adds a run-wide budget and reliability fixes. The lab runner checks out this exact commit in an ignored local cache, leaving the user's other RAVE checkout untouched. It reuses the existing successful Comparison A artifact and runs only the Hive candidate. The candidate is not the frozen reference and must not be described as the same code version as the historical RAVE results.

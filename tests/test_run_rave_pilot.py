@@ -26,7 +26,8 @@ def test_build_child_env_maps_comparison_a_names_to_rave_settings():
     env = pilot.build_child_env(values)
     assert env["RAVE_WEB_SEARCH_MODEL"] == "gpt-5-search-api"
     assert env["RAVE_WEB_SEARCH_CONTEXT_SIZE"] == "low"
-    assert env["RAVE_ANALYSIS_MAX_OUTPUT_TOKENS"] == "8192"
+    assert env["RAVE_RESEARCH_MODE"] == "shared_research"
+    assert env["RAVE_ANALYSIS_MAX_OUTPUT_TOKENS"] == "4096"
     assert env["RAVE_SYNTHESIS_MAX_OUTPUT_TOKENS"] == "8192"
     assert env["RAVE_MAX_RUN_TOKENS"] == "80000"
 
@@ -61,16 +62,49 @@ def test_validate_baseline_rejects_non_completed_run(tmp_path, monkeypatch):
 
 
 
-def test_paired_pilot_builds_fresh_baseline_with_full_shared_budget():
-    command = pilot.build_baseline_command("same question", "same scope")
-    assert command[command.index("research") + 1] == "same question"
-    assert command[command.index("--scope") + 1] == "same scope"
-    assert command[command.index("--max-tokens") + 1] == "80000"
-    assert command[command.index("--max-searches") + 1] == "3"
-    assert command[command.index("--max-model-calls") + 1] == "12"
-    assert command[command.index("--max-seconds") + 1] == "180"
-    assert command[command.index("--max-cost-usd") + 1] == "0.5"
-    assert "--live" in command
+def test_validate_baseline_reuses_the_preserved_completed_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(pilot, "LAB_ROOT", tmp_path)
+    run_dir = tmp_path / "artifacts" / "runs" / "pilot"
+    run_dir.mkdir(parents=True)
+    metadata = {
+        "status": "COMPLETED",
+        "question": pilot.QUESTION_DEFAULT,
+        "scope": pilot.QUESTION_SCOPE_DEFAULT,
+        "analysis_model": "gpt-4.1-mini",
+        "search_model": "gpt-5-search-api",
+        "search_provider": "openai_hosted_web_search",
+        "search_input_reservation_tokens": 16384,
+        "budget_limits": {
+            "max_tokens": 80000,
+            "max_searches": 3,
+            "max_model_calls": 12,
+            "max_seconds": 180,
+            "max_cost_usd": 0.50,
+        },
+        "pricing_rates_usd_per_1m": {"gpt-5-search-api": {"input": 1.25, "output": 10.0}},
+    }
+    result = {"status": "COMPLETED", "answer": "Preserved answer", "sources": [], "limitations": []}
+    (run_dir / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (run_dir / "result.json").write_text(json.dumps(result), encoding="utf-8")
+    loaded_meta, loaded_result, loaded_dir = pilot.validate_baseline("pilot")
+    assert loaded_meta["question"] == pilot.QUESTION_DEFAULT
+    assert loaded_result["answer"] == "Preserved answer"
+    assert loaded_dir == run_dir
+
+
+def test_validate_baseline_rejects_a_different_question(tmp_path, monkeypatch):
+    monkeypatch.setattr(pilot, "LAB_ROOT", tmp_path)
+    run_dir = tmp_path / "artifacts" / "runs" / "other"
+    run_dir.mkdir(parents=True)
+    (run_dir / "metadata.json").write_text(json.dumps({
+        "status": "COMPLETED", "question": "different", "scope": pilot.QUESTION_SCOPE_DEFAULT,
+    }), encoding="utf-8")
+    (run_dir / "result.json").write_text(json.dumps({
+        "status": "COMPLETED", "answer": "answer",
+    }), encoding="utf-8")
+    with pytest.raises(ValueError, match="question/scope"):
+        pilot.validate_baseline("other")
+
 
 
 def test_compose_rave_answer_keeps_all_comparable_final_sections():
@@ -81,14 +115,4 @@ def test_compose_rave_answer_keeps_all_comparable_final_sections():
         "conclusions": "Conclusion",
         "gaps_and_limitations": ["Not part of answer body"],
     })
-    assert answer == "Executive\\n\\nAnalysis\\n\\nCollective\\n\\nConclusion"
-
-
-def test_blinded_response_order_is_randomizable_and_key_is_separate():
-    baseline = {"answer": "A", "sources": [{"url": "https://a.example"}], "limitations": []}
-    rave = {"answer": "B", "sources": [{"url": "https://b.example"}], "limitations": []}
-    responses, key = pilot.build_blinded_responses(baseline, rave, ("rave_hive", "solo_baseline"))
-    assert [item["response_id"] for item in responses] == ["response_01", "response_02"]
-    assert [item["answer"] for item in responses] == ["B", "A"]
-    assert key == {"response_01": "rave_hive", "response_02": "solo_baseline"}
-    assert all(set(item) == {"response_id", "answer", "sources", "limitations"} for item in responses)
+    assert answer == "Executive\n\nAnalysis\n\nCollective\n\nConclusion"
