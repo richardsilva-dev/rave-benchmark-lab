@@ -8,7 +8,7 @@ Updated 2026-11-16. No live RAVE research request has been sent during this prep
 - Merged the guarded lab runner into `rave-benchmark-lab` `main` (merge commit `687a3c597bef2851d282cc929a33bccda8883d0b`).
 - The runner validates the preserved A artifact and exact question/scope, checks model mapping, search provider, pricing assumptions and budget limits, performs a non-billable `GET /models` authentication preflight, then runs only RAVE. It does not rerun Comparison A.
 - The runner clones RAVE into ignored `.cache/project_RAVE`, pins an exact commit, and leaves the user's separate local RAVE checkout untouched.
-- Pair artifacts are local and ignored. `blind_responses.json` contains anonymized responses; `system_key.json` stores the mapping separately.
+- Pair artifacts are local and ignored. `blind_responses.json` contains randomly ordered responses normalized to the same schema; `system_key.json` stores the mapping separately.
 
 ## RAVE candidate implementation
 
