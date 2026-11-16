@@ -236,13 +236,16 @@ def main() -> int:
         pair_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + rave_run_id
         pair_dir = LAB_ROOT / "artifacts" / "pairs" / pair_id
         pair_dir.mkdir(parents=True, exist_ok=True)
-        rave_payload = {}
-        if rave_artifact_path.is_file():
-            shutil.copy2(rave_artifact_path, pair_dir / "rave_run.json")
-            rave_payload = json.loads(rave_artifact_path.read_text(encoding="utf-8"))
         (pair_dir / "rave_cli_output.json").write_text(
             json.dumps(rave_output, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        if not rave_artifact_path.is_file():
+            raise RuntimeError("RAVE did not persist its run artifact; the pair cannot be evaluated")
+        shutil.copy2(rave_artifact_path, pair_dir / "rave_run.json")
+        try:
+            rave_payload = json.loads(rave_artifact_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("RAVE persisted an invalid JSON run artifact") from exc
 
         rave_budget = rave_payload.get("run_budget", rave_output.get("run_budget", {}))
         rave_meta = rave_payload.get("metadata", rave_output.get("metadata", {}))
@@ -341,7 +344,7 @@ def main() -> int:
         }
         print(json.dumps(summary, ensure_ascii=False))
         return 0 if pair_status == "COMPLETED" else 2
-    except (ValueError, RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    except (ValueError, RuntimeError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         print(f"RAVE pilot stopped safely: {exc}", file=sys.stderr)
         return 1
 
