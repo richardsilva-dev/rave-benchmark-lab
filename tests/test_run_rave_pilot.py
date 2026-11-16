@@ -44,7 +44,7 @@ def test_auth_preflight_does_not_echo_key_on_401(monkeypatch):
     error = urllib.error.HTTPError(
         "https://api.openai.com/v1/models", 401, "Unauthorized", {}, io.BytesIO(b"")
     )
-    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+    monkeypatch.setattr(pilot, "_open_preflight", lambda *args, **kwargs: (_ for _ in ()).throw(error))
     with pytest.raises(RuntimeError) as exc:
         pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
     assert "secret-value" not in str(exc.value)
@@ -135,3 +135,20 @@ def test_model_reported_sources_are_marked_without_changing_provider_sources():
     )
     assert sources[0]["provenance"] == "provider_returned"
     assert sources[1] == {"url": "https://model.example", "provenance": "model_reported"}
+
+
+def test_build_child_env_rejects_untrusted_base_url():
+    values = {
+        "RAVE_API_KEY": "not-a-real-key",
+        "RAVE_BASE_URL": "https://attacker.example/v1",
+        "RAVE_SEARCH_INPUT_USD_PER_1M": "1.25",
+        "RAVE_SEARCH_OUTPUT_USD_PER_1M": "10.0",
+    }
+    with pytest.raises(ValueError, match="RAVE_BASE_URL"):
+        pilot.build_child_env(values)
+
+
+def test_preflight_redirect_handler_refuses_redirects():
+    handler = pilot._NoRedirectHandler()
+    request = urllib.request.Request("https://api.openai.com/v1/models")
+    assert handler.redirect_request(request, None, 302, "Found", {}, "https://attacker.example/collect") is None
