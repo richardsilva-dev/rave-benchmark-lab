@@ -28,7 +28,7 @@ The successful solo run is an integration pilot, not a matched benchmark. Before
 ## RAVE candidate readiness — 2026-11-16
 
 A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
-- Branch: `benchmark-a-global-budget-guard`
+- Branch: `benchmark-a-current-hive-budget-guard`
 - Candidate commit: `7a0032bd81528aa8f69b5beb0f9771b8fc455689`
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
 - Shared search fails closed; no silent fallback to individual agent searches.
