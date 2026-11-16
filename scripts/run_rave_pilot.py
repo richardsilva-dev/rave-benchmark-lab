@@ -231,8 +231,10 @@ def main() -> int:
         pair_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + rave_run_id
         pair_dir = LAB_ROOT / "artifacts" / "pairs" / pair_id
         pair_dir.mkdir(parents=True, exist_ok=True)
+        rave_payload = {}
         if rave_artifact_path.is_file():
             shutil.copy2(rave_artifact_path, pair_dir / "rave_run.json")
+            rave_payload = json.loads(rave_artifact_path.read_text(encoding="utf-8"))
         (pair_dir / "rave_cli_output.json").write_text(
             json.dumps(rave_output, ensure_ascii=False, indent=2), encoding="utf-8"
         )
