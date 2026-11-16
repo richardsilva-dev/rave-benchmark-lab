@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -81,8 +82,9 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
         raise ValueError("RAVE_API_KEY is missing from comparison_a/.env")
     base_url = env.get("RAVE_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
     parsed = urlsplit(base_url)
-    if parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.username or parsed.password:
-        raise ValueError("RAVE_BASE_URL must be https://api.openai.com/v1")
+    if (parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.port not in (None, 443)
+            or parsed.path.rstrip("/") != "/v1" or parsed.username or parsed.password or parsed.query or parsed.fragment):
+        raise ValueError("RAVE_BASE_URL must be exactly https://api.openai.com/v1")
     for name in ("RAVE_SEARCH_INPUT_USD_PER_1M", "RAVE_SEARCH_OUTPUT_USD_PER_1M"):
         try:
             rate = float(env.get(name, ""))
@@ -117,14 +119,29 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
     return env
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    handler_order = 100
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_preflight(request, timeout):
+    opener = urllib.request.build_opener(_NoRedirectHandler())
+    return opener.open(request, timeout=timeout)
+
+
 def check_api_auth(base_url: str, api_key: str) -> None:
+    parsed = urlsplit(base_url)
+    if parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.path.rstrip("/") != "/v1":
+        raise ValueError("Refusing to send an API key to an untrusted base URL")
     request = urllib.request.Request(
-        f"{base_url.rstrip('/')}/models",
+        "https://api.openai.com/v1/models",
         headers={"Authorization": f"Bearer {api_key}"},
         method="GET",
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with _open_preflight(request, timeout=20) as response:
             if response.status != 200:
                 raise RuntimeError(f"OpenAI authentication preflight returned HTTP {response.status}")
             response.read(1024)
@@ -188,16 +205,50 @@ def compose_rave_answer(final_output: dict) -> str:
     )
 
 
-def build_baseline_command(question: str, scope: str) -> list[str]:
-    return [
-        "uv", "run", "--project", str(LAB_ROOT / "comparison_a"), "--locked", "--extra", "dev",
-        "solo-baseline", "research", question, "--scope", scope, "--live",
-        "--max-tokens", str(BUDGET["max_tokens"]),
-        "--max-searches", str(BUDGET["max_searches"]),
-        "--max-model-calls", str(BUDGET["max_model_calls"]),
-        "--max-seconds", str(BUDGET["max_seconds"]),
-        "--max-cost-usd", str(BUDGET["max_cost_usd"]),
+def build_blinded_responses(baseline: dict, rave: dict, order: tuple[str, str] | None = None):
+    systems = [
+        ("solo_baseline", baseline),
+        ("rave_hive", rave),
     ]
+    if order is None:
+        secrets.SystemRandom().shuffle(systems)
+    else:
+        by_id = {system_id: payload for system_id, payload in systems}
+        if set(order) != set(by_id):
+            raise ValueError("blind response order must contain each system exactly once")
+        systems = [(system_id, by_id[system_id]) for system_id in order]
+
+    responses = []
+    system_key = {}
+    for index, (system_id, payload) in enumerate(systems, start=1):
+        response_id = f"response_{index:02d}"
+        responses.append({
+            "response_id": response_id,
+            "answer": payload.get("answer", ""),
+            "sources": payload.get("sources", []) or [],
+            "limitations": payload.get("limitations", []) or [],
+        })
+        system_key[response_id] = system_id
+    return responses, system_key
+
+
+def normalize_rave_sources(provider_sources, model_references):
+    normalized = []
+    for item in provider_sources or []:
+        if isinstance(item, dict):
+            source = dict(item)
+            source.setdefault("provenance", "provider_returned")
+        else:
+            source = {"url": str(item), "provenance": "provider_returned"}
+        normalized.append(source)
+    for item in model_references or []:
+        if isinstance(item, dict):
+            source = dict(item)
+            source["provenance"] = "model_reported"
+        else:
+            source = {"url": str(item), "provenance": "model_reported"}
+        normalized.append(source)
+    return normalized
 
 
 def main() -> int:
@@ -273,31 +324,28 @@ def main() -> int:
         rave_final = rave_payload.get("final_output", rave_output.get("final_output", {}))
         rave_answer = compose_rave_answer(rave_final) if isinstance(rave_final, dict) else ""
         integration = rave_payload.get("integration", {})
-        rave_sources = integration.get("web_sources", [])
-        rave_model_refs = integration.get("model_reported_references", [])
+        rave_sources = integration.get("web_sources", []) or []
+        rave_model_refs = integration.get("model_reported_references", []) or []
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
 
-        blind_responses = [
+        normalized_rave_sources = normalize_rave_sources(rave_sources, rave_model_refs)
+        blind_responses, system_key = build_blinded_responses(
             {
-                "response_id": "response_01",
                 "answer": baseline_result["answer"],
                 "sources": baseline_result.get("sources", []),
                 "limitations": baseline_result.get("limitations", []),
             },
             {
-                "response_id": "response_02",
                 "answer": rave_answer,
-                "sources": rave_sources,
-                "model_reported_references": rave_model_refs,
+                "sources": normalized_rave_sources,
                 "limitations": rave_limitations,
             },
-        ]
+        )
         (pair_dir / "blind_responses.json").write_text(
             json.dumps(blind_responses, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         (pair_dir / "system_key.json").write_text(
-            json.dumps({"response_01": "solo_baseline", "response_02": "rave_hive"}, indent=2),
-            encoding="utf-8"
+            json.dumps(system_key, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         pair_status = (

@@ -32,6 +32,8 @@ The first capped live run validates integration, authentication, usage reporting
 
 ## First paired pilot profile (2026-11-16)
 
+The current Notion direction defines three conditions: A — one agent; B — multiple simple agents with basic integration; C — the full RAVE Hive. This first pilot covers A versus C only; condition B is not implemented yet. It therefore cannot isolate the incremental value of peer cooperation from the value of multi-agent decomposition.
+
 The first pilot reuses the already completed Comparison A run `solo-5b3dc0590dfc` and executes only the pinned RAVE Hive candidate. It does not rerun or modify A. Both outputs use the same recorded question and scope, `gpt-4.1-mini` analysis, `gpt-5-search-api` hosted search, and low search context.
 
 - Shared run-wide limits: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated cost for the new RAVE run.
@@ -42,6 +44,6 @@ The first pilot reuses the already completed Comparison A run `solo-5b3dc0590dfc
 - The preserved A run already incurred approximately USD 0.06093635. The new RAVE run has a local estimated ceiling of USD 0.50, giving an estimated maximum total of approximately USD 0.56093635 for this pair. This is not a provider-enforced billing cap; retain an independent OpenAI project spend limit.
 - GPT-5 Search API token rates (USD 1.25 input / USD 10.00 output per million tokens) remain user-configured estimates and must be verified against the applicable billing record.
 
-The runner performs a non-billable `GET /models` authentication preflight before any paid RAVE request. It creates blinded response files and stores the system key separately. A pair is eligible only if the RAVE artifact reports `execution_status=COMPLETED`, the final answer is non-empty, and the budget snapshot is present.
+The runner performs a non-billable `GET /models` authentication preflight before any paid RAVE request. It randomizes response order, normalizes both outputs to the same schema, preserves source provenance and stores the system key separately. A pair is eligible only if the RAVE artifact reports `execution_status=COMPLETED`, the final answer is non-empty, and the budget snapshot is present.
 
-This is a one-question pilot, not the ten-question benchmark in the 30-day protocol. The historical A artifact does not record its exact source commit or resolved output cap, RAVE uses a different internal per-call allocation, and no blind independent quality scoring has been performed yet. Results are preliminary and cannot establish general superiority.
+This is a one-question A-versus-C pilot, not the ten-question benchmark or the full A/B/C design. The independent source-based map in `REFERENCE_MAP_PILOT.md` was prepared before the RAVE output, but is retrospective relative to the already observed A output and must be labeled exploratory. The historical A artifact does not record its exact source commit or resolved output cap, RAVE uses a different internal per-call allocation, and no blind independent quality scoring has been performed yet. Results are preliminary and cannot establish general superiority. See [EVALUATION_RUBRIC.md](EVALUATION_RUBRIC.md) for the fixed scoring criteria.

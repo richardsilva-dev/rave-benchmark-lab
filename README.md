@@ -32,9 +32,11 @@ Com o artefato local `artifacts/runs/solo-5b3dc0590dfc` presente e `comparison_a
 python scripts/run_rave_pilot.py --live
 ```
 
-O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git. O arquivo `blind_responses.json` contém as duas respostas sem identificar os sistemas; `system_key.json` guarda o mapeamento separado para permitir avaliação cega. Não envie a chave do sistema junto com as respostas antes da avaliação.
+O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git. O arquivo `blind_responses.json` contém as duas respostas em ordem aleatória, com o mesmo esquema e sem identificar os sistemas; a proveniência das fontes é preservada. `system_key.json` guarda o mapeamento separado. Para avaliação cega, compartilhe apenas `blind_responses.json` e não envie a chave antes da pontuação.
 
 O piloto preserva o custo já incorrido pela execução A (aproximadamente USD 0.06093635) e limita a nova execução RAVE a USD 0.50 estimados. O teto estimado total do par é aproximadamente USD 0.56093635. Esse limite é local, não um bloqueio de cobrança do provedor; mantenha um limite de gastos independente no projeto OpenAI e confirme as tarifas de busca no registro de cobrança.
+
+A direção mais recente no Notion define três condições (A: agente único; B: múltiplos agentes simples com integração básica; C: RAVE completo). Este piloto cobre apenas A versus C; B ainda não foi implementado. Portanto, o resultado será preliminar e não isolará sozinho o ganho específico da cooperação entre agentes. Os critérios de pontuação estão registrados em [docs/EVALUATION_RUBRIC.md](docs/EVALUATION_RUBRIC.md), e o mapa independente de fontes em [docs/REFERENCE_MAP_PILOT.md](docs/REFERENCE_MAP_PILOT.md).
 
 ## Status GitHub
 

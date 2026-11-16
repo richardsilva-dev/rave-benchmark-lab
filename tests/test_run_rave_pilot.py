@@ -1,6 +1,7 @@
 import io
 import json
 import urllib.error
+import urllib.request
 
 import pytest
 
@@ -44,7 +45,7 @@ def test_auth_preflight_does_not_echo_key_on_401(monkeypatch):
     error = urllib.error.HTTPError(
         "https://api.openai.com/v1/models", 401, "Unauthorized", {}, io.BytesIO(b"")
     )
-    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: (_ for _ in ()).throw(error))
+    monkeypatch.setattr(pilot, "_open_preflight", lambda *args, **kwargs: (_ for _ in ()).throw(error))
     with pytest.raises(RuntimeError) as exc:
         pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
     assert "secret-value" not in str(exc.value)
@@ -116,3 +117,39 @@ def test_compose_rave_answer_keeps_all_comparable_final_sections():
         "gaps_and_limitations": ["Not part of answer body"],
     })
     assert answer == "Executive\n\nAnalysis\n\nCollective\n\nConclusion"
+
+
+def test_blinded_response_order_is_randomizable_and_key_is_separate():
+    baseline = {"answer": "A", "sources": [{"url": "https://a.example"}], "limitations": []}
+    rave = {"answer": "B", "sources": [{"url": "https://b.example"}], "limitations": []}
+    responses, key = pilot.build_blinded_responses(baseline, rave, ("rave_hive", "solo_baseline"))
+    assert [item["response_id"] for item in responses] == ["response_01", "response_02"]
+    assert [item["answer"] for item in responses] == ["B", "A"]
+    assert key == {"response_01": "rave_hive", "response_02": "solo_baseline"}
+    assert all(set(item) == {"response_id", "answer", "sources", "limitations"} for item in responses)
+
+
+def test_model_reported_sources_are_marked_without_changing_provider_sources():
+    sources = pilot.normalize_rave_sources(
+        [{"url": "https://provider.example", "title": "Provider"}],
+        ["https://model.example"],
+    )
+    assert sources[0]["provenance"] == "provider_returned"
+    assert sources[1] == {"url": "https://model.example", "provenance": "model_reported"}
+
+
+def test_build_child_env_rejects_untrusted_base_url():
+    values = {
+        "RAVE_API_KEY": "not-a-real-key",
+        "RAVE_BASE_URL": "https://attacker.example/v1",
+        "RAVE_SEARCH_INPUT_USD_PER_1M": "1.25",
+        "RAVE_SEARCH_OUTPUT_USD_PER_1M": "10.0",
+    }
+    with pytest.raises(ValueError, match="RAVE_BASE_URL"):
+        pilot.build_child_env(values)
+
+
+def test_preflight_redirect_handler_refuses_redirects():
+    handler = pilot._NoRedirectHandler()
+    request = urllib.request.Request("https://api.openai.com/v1/models")
+    assert handler.redirect_request(request, None, 302, "Found", {}, "https://attacker.example/collect") is None

@@ -8,7 +8,7 @@ Updated 2026-11-16. No live RAVE research request has been sent during this prep
 - Merged the guarded lab runner into `rave-benchmark-lab` `main` (merge commit `687a3c597bef2851d282cc929a33bccda8883d0b`).
 - The runner validates the preserved A artifact and exact question/scope, checks model mapping, search provider, pricing assumptions and budget limits, performs a non-billable `GET /models` authentication preflight, then runs only RAVE. It does not rerun Comparison A.
 - The runner clones RAVE into ignored `.cache/project_RAVE`, pins an exact commit, and leaves the user's separate local RAVE checkout untouched.
-- Pair artifacts are local and ignored. `blind_responses.json` contains anonymized responses; `system_key.json` stores the mapping separately.
+- Pair artifacts are local and ignored. `blind_responses.json` contains randomly ordered responses normalized to the same schema; `system_key.json` stores the mapping separately.
 
 ## RAVE candidate implementation
 
@@ -51,7 +51,7 @@ The preserved A run already incurred approximately USD 0.06093635. The new RAVE 
 
 ## Evaluation limits
 
-This is a one-question pilot, not the ten-question benchmark in the 30-day protocol. The historical A artifact does not record its exact source commit or resolved output cap; RAVE uses a different internal per-call output allocation even though the run-wide ceiling is matched. No blind independent quality scoring has been performed. A completed pair is preliminary evidence only and cannot establish general superiority. Share only `blind_responses.json` for blinded evaluation; keep `system_key.json` separate until scoring is complete.
+This is a one-question A-versus-C pilot, not the full A/B/C design or ten-question benchmark in Notion. Condition B (multiple simple agents with basic integration) is not implemented, so this pair cannot isolate the value of peer cooperation from the value of multi-agent decomposition. The independent source-based map in `REFERENCE_MAP_PILOT.md` was prepared before the RAVE output but is retrospective relative to the already observed A output; this run is exploratory, not preregistered. The historical A artifact does not record its exact source commit or resolved output cap; RAVE uses a different internal per-call output allocation even though the run-wide ceiling is matched. No blind independent quality scoring has been performed. A completed pair is preliminary evidence only and cannot establish general superiority. Share only `blind_responses.json` for blinded evaluation; keep `system_key.json` separate until scoring is complete. Use [EVALUATION_RUBRIC.md](EVALUATION_RUBRIC.md).
 
 ## Comparison B
 
