@@ -28,3 +28,18 @@ GPT-4.1-mini rates and the Web Search call fee are based on the official OpenAI 
 ## Pilot versus benchmark
 
 The first capped live run validates integration, authentication, usage reporting, source extraction, output schema and artifact writing. It is not benchmark data. Formal paired comparisons, a question set, blind evaluation and comparative claims remain gated on the later benchmark protocol. A result is eligible for later evaluation only when status is `COMPLETED`, the exact question/scope and code references are recorded, and all budget fields are present.
+
+
+## Fixed pilot profile (2026-11-16)
+
+The first paired pilot uses the same exact question and scope for both systems, the same hosted search model and low search context, and the following per-system caps:
+- Analysis model: `gpt-4.1-mini`; hosted search model: `gpt-5-search-api`.
+- Hosted search output cap: 512 tokens.
+- Analysis / JSON-repair output cap: 8,192 tokens; RAVE final synthesis cap: 8,192 tokens.
+- Output structure: no more than 10 findings and 3 evidence items per finding.
+- Global budget per system: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, USD 0.50 estimated cost.
+- Hosted search context reserve: 16,384 tokens.
+- Hosted web-search tool fee estimate: USD 0.01 per call.
+- GPT-5 Search API token-rate assumptions are carried from the recorded pilot configuration (USD 1.25 input / USD 10.00 output per million tokens). They are user-configured estimates and must be verified against the account billing record.
+
+The paired runner creates a new Comparison A run first, then a new RAVE run with the same question and scope. A failed A run prevents the RAVE request. A failed or partial RAVE run makes the pair ineligible. A successful pair creates blinded response files and a separate system key. This pilot tests integration and supplies preliminary evidence only; it does not establish general superiority.
