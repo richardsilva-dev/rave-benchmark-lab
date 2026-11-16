@@ -1,25 +1,55 @@
 # Implementation status
 
-Updated 2026-11-13. Private remote: https://github.com/richardsilva-dev/rave-benchmark-lab, branch `main`. Local commits have been published. The RAVE main repository was not modified.
+Updated 2026-11-16. Active correction branch: `fix/comparison-a-json-output-and-validation`, based on `comparison-a-budget-and-methodology-hardening`.
 
-## Completed
+## Findings from the four recorded pilot runs
 
-- Separate lab repository created and published privately.
-- Frozen RAVE branch and commit verified; architecture, modes, models, provider, and dependency facts documented from that revision.
-- Comparison A has its own Python project, `uv.lock`, and `.venv`; config validation, single sequential agent, hosted search matching the RAVE provider, budget controller, telemetry, schema validation, source provenance, and SSRF-conscious page reader are implemented.
-- Comparison A dependency audit found no known vulnerabilities or adverse package statuses.
-- Comparison A `uv sync --locked --extra dev` completed. `uv run --locked --extra dev pytest -p no:cacheprovider -q`: 21 passed. Offline smoke checks passed. No real API call was made because neither a local `.env` nor `RAVE_API_KEY` was present.
-- Common contracts, adapters, protocol docs, and security docs exist. JSON contract syntax and Python byte-compilation passed.
-- Open Deep Research is an actual git submodule at `1b7d2e80db9faa586165c60e09096dbbfd483a64`; the upstream MIT license is preserved. Config fields and model/search mapping are inspected and documented.
+- `solo-1e01244d0f41`: failed before useful work; hosted search returned HTTP 401 with `invalid_api_key`. This is a credential/account configuration failure, not a prompt or retry bug. The client correctly does not retry 401.
+- `solo-45ec415605c5`: blocked before network I/O because the configured reservation exceeded the run token budget.
+- `solo-5b3dc0590dfc`: completed successfully; 8 provider-returned sources; estimated cost USD 0.06093635; duration about 54.9 seconds.
+- `solo-cbd344a619ea`: search succeeded, but both analysis and JSON-repair output hit the 4,096-token completion ceiling and the final response remained invalid JSON. This is consistent with output truncation, not an authentication failure.
 
-## Security gate and remaining work
+## Changes in this correction branch
 
-- `uv audit --locked` on the Open Deep Research lock reported 89 known advisories across 242 packages and archived statuses for `langchain-community` and `rsa`. The audit output contained no severity scores. Per the lab's security rule, Comparison B installation, startup, and smoke test are stopped pending review. The upstream lock has not been edited. See [DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md).
-- Comparison B has no installed independent virtual environment, so the lab is not ready for a benchmark.
-- Comparison A's real installation probe awaits a locally configured API key; no credentials were read or logged and no paid calls were made.
-- No numeric budgets, official questions, scoring rubric, evaluator, or benchmark run were created.
-- Model/search equality is imperfect: Open Deep Research `search_api="openai"` uses `web_search_preview`, while frozen RAVE uses `gpt-5-search-api` via Chat Completions. This is documented as a confound.
+- Raise the analysis/JSON-repair completion-token floor to 8,192 because the failed run exhausted 4,096 output tokens.
+- Tighten the output contract: concise summary, at most 10 findings, and at most 3 evidence items per finding. This reduces malformed/truncated output while preserving the research structure.
+- Add the correction branch to GitHub Actions so the locked offline tests and security smoke checks run against the actual repository commit.
+- Preserve fail-closed authentication: HTTP 401/403 are not retried and their reservations are released. No key is written to source control or workflow logs.
 
-## Before any benchmark
+## Remaining user-only gate
 
-Assess and resolve Comparison B's dependency security findings without silently changing the frozen upstream reference; prepare and audit its independent environment; verify local loopback startup, models/search, source retention, and metadata; run the Comparison A live installation probe when credentials are configured; complete adapter compatibility tests; then define the formal experimental protocol in a later stage. Do not start official comparisons while these items remain pending.
+A 401 caused by `invalid_api_key` cannot be repaired by changing Python code. The credential must be replaced or re-authorized by the account owner. The secure next path is a GitHub Actions repository secret named `RAVE_API_KEY` for any future remote live workflow; never commit the key or paste it into chat. The existing local `.env` remains local and ignored.
+
+## Experimental status
+
+The successful solo run is an integration pilot, not a matched benchmark. Before claiming that RAVE's collective architecture outperforms a single researcher, Comparison A must be paired with a RAVE run using the same question, scope, model/tool mapping, output limits and run-wide budgets. Comparison B remains blocked by its dependency audit and must not be installed or launched until the findings are reviewed.
+
+
+## RAVE candidate readiness — 2026-11-16
+
+A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
+- Branch: `benchmark-a-global-budget-guard`
+- Candidate commit: `7a0032bd81528aa8f69b5beb0f9771b8fc455689`
+- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
+- Shared search fails closed; no silent fallback to individual agent searches.
+- Agent analysis and JSON-repair output cap: 8,192 tokens; at most 10 findings and 3 evidence items per finding; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
+- Search tool fee is estimated at USD 0.01 per call (USD 10 per 1,000 calls), matching Comparison A. Both systems use the same shared-search system prompt.
+- A definitive 401/403 releases its token/cost reservation but still counts the failed attempt; timeouts and ambiguous failures retain reservations conservatively.
+- Request timeout is bounded by the remaining run-wide wall-clock budget.
+- The API key is never committed, printed, or included in telemetry.
+
+The candidate branch remains separate from `main` until its CI checks pass. It does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Paired pilot readiness
+
+`scripts/run_rave_pilot.py` now creates a fresh Comparison A run and then a RAVE Hive run with the same question and scope. It no longer reuses the historical `solo-5b3dc0590dfc` artifact as if it were a newly matched baseline.
+
+Before sending paid research requests, the runner:
+1. verifies that the lab checkout is clean and records its commit;
+2. prepares the exact RAVE candidate commit and refuses to overwrite a dirty RAVE checkout;
+3. checks the local ignored `comparison_a/.env` configuration and performs a non-billable `GET /models` authentication preflight;
+4. applies the same run-wide caps to both systems: 80,000 tokens, 3 searches, 12 model calls, 180 seconds, and USD 0.50 estimated cost per system;
+5. runs Comparison A first and stops without launching RAVE if A is not `COMPLETED`;
+6. verifies question, scope, model mapping, search price assumptions, and persisted artifacts before creating a pair manifest.
+
+The run is a one-question pilot, not the ten-question protocol. It creates blinded response files and a separate system key, but no blind independent quality scoring has yet been performed. A completed pair is preliminary evidence, not proof of general superiority. Comparison B remains blocked by its dependency audit and must not be installed or launched.

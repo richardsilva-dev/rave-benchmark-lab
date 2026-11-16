@@ -6,7 +6,7 @@ Laboratório experimental para comparar o RAVE com um agente individual controla
 
 Estrutura, contratos e adaptadores iniciais preparados. A versão congelada do RAVE é `richardsilva-dev/project_RAVE`, branch `independent_research`, commit `d5a7b2397bc50796ab83ee22ed326fdc087b84b2` (12/11/2026). A documentação de implementação marca as execuções v3 anteriores como exploratórias; não reutilizá-las como resultados deste laboratório.
 
-O projeto não está pronto para bateria experimental. A Comparação A possui lockfile, ambiente isolado, auditoria sem achados conhecidos e 21 testes aprovados. A auditoria do lock upstream da Comparação B apontou 89 vulnerabilidades conhecidas e dois status de pacotes arquivados; por segurança, esse ambiente não foi instalado nem executado. Consulte [status](docs/IMPLEMENTATION_STATUS.md) e [auditoria](docs/DEPENDENCY_AUDIT.md). Os limites de custo/tempo/tokens permanecem intencionalmente indefinidos até um piloto.
+A execução preservada da Comparação A (`solo-5b3dc0590dfc`) foi concluída e permanece intacta como piloto de integração. Uma branch candidata do RAVE agora inclui orçamento global por execução, correções de parsing JSON, telemetria para falhas de leitura e limite de saída separado para síntese final; a suíte do GitHub Actions passou em 26 testes. O laboratório contém um executor protegido que reutiliza o resultado A e executa somente o RAVE após uma verificação de autenticação sem custo de pesquisa. Nenhuma nova chamada de pesquisa do RAVE foi feita. A Comparação B continua bloqueada: a auditoria do lock upstream apontou 89 vulnerabilidades conhecidas e dois status de pacotes arquivados; esse ambiente não foi instalado nem executado. Consulte [status](docs/IMPLEMENTATION_STATUS.md) e [auditoria](docs/DEPENDENCY_AUDIT.md).
 
 ## Preparação
 
@@ -24,6 +24,29 @@ Cada comparação deve usar seu próprio ambiente virtual. A Comparação B usa 
 
 Copie o `.env.example` da comparação desejada para `.env` e preencha localmente. Nunca registre chaves, resultados reais ou dados pessoais. O laboratório não inicia chamadas de API automaticamente.
 
+## Primeiro piloto pareado A × RAVE
+
+Com o artefato local `artifacts/runs/solo-5b3dc0590dfc` presente e `comparison_a/.env` preenchido com uma chave válida e os preços configurados, execute uma única vez:
+
+```powershell
+python scripts/run_rave_pilot.py --live
+```
+
+O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git. O arquivo `blind_responses.json` contém as duas respostas sem identificar os sistemas; `system_key.json` guarda o mapeamento separado para permitir avaliação cega. Não envie a chave do sistema junto com as respostas antes da avaliação.
+
 ## Status GitHub
 
-Este diretório é o checkout local de preparação. A criação do repositório remoto privado requer uma operação GitHub que não está disponível na integração conectada nesta sessão; nenhuma publicação foi feita.
+Repositório remoto privado ativo. A branch `comparison-a-budget-and-methodology-hardening` contém as correções e o executor do piloto; os artefatos de execução permanecem locais e são ignorados pelo Git.
+
+
+## Paired RAVE pilot
+
+After the RAVE candidate and Comparison A branches are merged and the local checkouts are synchronized, prepare the ignored `comparison_a/.env` using `comparison_a/.env.example`. Keep `RAVE_API_KEY` private. Then run the paired pilot explicitly:
+
+```powershell
+uv run --project comparison_a --locked --extra dev python scripts/run_rave_pilot.py --live
+```
+
+The runner performs a non-billable authentication preflight before paid research, generates a fresh solo run, then a RAVE Hive run with the same question, scope, model mapping and run-wide caps. It stops safely on authentication, budget, or incomplete-result failures. Artifacts are written under ignored `artifacts/runs/` and `artifacts/pairs/`; do not commit them without a privacy/secrets review.
+
+Each system has its own USD 0.50 estimated cap, so the pair may consume up to USD 1.00 in total. Keep an independent OpenAI project spend limit enabled. The GPT-5 Search API token rates in the example configuration are the user-configured values from the prior pilot (USD 1.25 input / USD 10.00 output per million tokens); verify them against the applicable billing record before the live run.

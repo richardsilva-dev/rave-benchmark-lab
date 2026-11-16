@@ -1,5 +1,8 @@
-def test_research_loop_is_sequential_by_design():
+def test_baseline_is_single_pass_without_peer_or_followup_loop():
     import inspect
     from solo_baseline.agent import SoloResearchAgent
-    src=inspect.getsource(SoloResearchAgent.run)
-    assert "for _ in range" in src and "gather(" not in src and "create_task(" not in src
+    source = inspect.getsource(SoloResearchAgent.run)
+    assert "range(" not in source
+    assert "gather(" not in source and "create_task(" not in source
+    assert source.count("OpenAIHostedSearch") == 1
+    assert source.count("_analysis") == 1
