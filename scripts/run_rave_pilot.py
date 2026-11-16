@@ -16,7 +16,7 @@ LAB_ROOT = Path(__file__).resolve().parents[1]
 BASELINE_RUN_ID = "solo-5b3dc0590dfc"
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-global-budget-guard"
-RAVE_COMMIT = "831b5b45321ec827d9383d9a73c685740315badf"
+RAVE_COMMIT = "3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b"
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
     "max_tokens": 80000,
