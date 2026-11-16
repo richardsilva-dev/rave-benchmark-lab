@@ -51,7 +51,7 @@ The preserved A run already incurred approximately USD 0.06093635. The new RAVE 
 
 ## Evaluation limits
 
-This is a one-question pilot, not the ten-question benchmark in the 30-day protocol. The historical A artifact does not record its exact source commit or resolved output cap; RAVE uses a different internal per-call output allocation even though the run-wide ceiling is matched. No blind independent quality scoring has been performed. A completed pair is preliminary evidence only and cannot establish general superiority. Share only `blind_responses.json` for blinded evaluation; keep `system_key.json` separate until scoring is complete.
+This is a one-question A-versus-C pilot, not the full A/B/C design or ten-question benchmark in Notion. Condition B (multiple simple agents with basic integration) is not implemented, so this pair cannot isolate the value of peer cooperation from the value of multi-agent decomposition. The independent reference checklist is retrospective relative to the already observed A output; this run is exploratory, not preregistered. The historical A artifact does not record its exact source commit or resolved output cap; RAVE uses a different internal per-call output allocation even though the run-wide ceiling is matched. No blind independent quality scoring has been performed. A completed pair is preliminary evidence only and cannot establish general superiority. Share only `blind_responses.json` for blinded evaluation; keep `system_key.json` separate until scoring is complete. Use [EVALUATION_RUBRIC.md](EVALUATION_RUBRIC.md).
 
 ## Comparison B
 
