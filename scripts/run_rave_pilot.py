@@ -51,7 +51,7 @@ def validate_baseline(run_id: str) -> tuple[dict, dict, Path]:
     result = json.loads(result_path.read_text(encoding="utf-8"))
     if metadata.get("status") != "COMPLETED" or result.get("status") != "COMPLETED":
         raise ValueError("The selected Comparison A run is not COMPLETED")
-    if not result.get("answer", "").strip():
+    if not isinstance(result.get("answer"), str) or not result["answer"].strip():
         raise ValueError("The selected Comparison A run has no answer")
     if not metadata.get("question") or not metadata.get("scope"):
         raise ValueError("The baseline must record the exact question and scope")
@@ -195,13 +195,12 @@ def main() -> int:
         if not dotenv_path.is_file():
             raise ValueError("Create comparison_a/.env from comparison_a/.env.example first")
         child_env = build_child_env(parse_dotenv(dotenv_path))
-        if float(child_env["RAVE_SEARCH_INPUT_USD_PER_1M"]) != float(
-            baseline_meta["pricing_rates_usd_per_1m"]["gpt-5-search-api"]["input"]
-        ):
+        search_rates = baseline_meta.get("pricing_rates_usd_per_1m", {}).get("gpt-5-search-api")
+        if not isinstance(search_rates, dict) or "input" not in search_rates or "output" not in search_rates:
+            raise ValueError("The preserved Comparison A run has no complete search pricing record")
+        if float(child_env["RAVE_SEARCH_INPUT_USD_PER_1M"]) != float(search_rates["input"]):
             raise ValueError("Search input price differs from the preserved Comparison A run")
-        if float(child_env["RAVE_SEARCH_OUTPUT_USD_PER_1M"]) != float(
-            baseline_meta["pricing_rates_usd_per_1m"]["gpt-5-search-api"]["output"]
-        ):
+        if float(child_env["RAVE_SEARCH_OUTPUT_USD_PER_1M"]) != float(search_rates["output"]):
             raise ValueError("Search output price differs from the preserved Comparison A run")
         check_api_auth(child_env["RAVE_BASE_URL"], child_env["RAVE_API_KEY"])
 
@@ -232,6 +231,8 @@ def main() -> int:
         rave_artifact_path = Path(rave_output.get("result_path", ""))
         if not rave_artifact_path.is_absolute():
             rave_artifact_path = rave_path / rave_artifact_path
+        if not rave_artifact_path.is_file():
+            raise RuntimeError("RAVE did not persist its run artifact; the pair cannot be evaluated")
         pair_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + rave_run_id
         pair_dir = LAB_ROOT / "artifacts" / "pairs" / pair_id
         pair_dir.mkdir(parents=True, exist_ok=True)
