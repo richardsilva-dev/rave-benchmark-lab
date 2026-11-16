@@ -29,11 +29,11 @@ The successful solo run is an integration pilot, not a matched benchmark. Before
 
 A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
 - Branch: `benchmark-a-global-budget-guard`
-- Candidate commit: `bf107f1b72ec7723ec586308532bde10f134af97`
+- Candidate commit: `7a0032bd81528aa8f69b5beb0f9771b8fc455689`
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
 - Shared search fails closed; no silent fallback to individual agent searches.
-- Agent analysis and JSON-repair output cap: 8,192 tokens; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
-- Search tool fee is estimated at USD 0.01 per call (USD 10 per 1,000 calls), matching Comparison A.
+- Agent analysis and JSON-repair output cap: 8,192 tokens; at most 10 findings and 3 evidence items per finding; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
+- Search tool fee is estimated at USD 0.01 per call (USD 10 per 1,000 calls), matching Comparison A. Both systems use the same shared-search system prompt.
 - A definitive 401/403 releases its token/cost reservation but still counts the failed attempt; timeouts and ambiguous failures retain reservations conservatively.
 - Request timeout is bounded by the remaining run-wide wall-clock budget.
 - The API key is never committed, printed, or included in telemetry.
