@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -200,6 +201,52 @@ def build_baseline_command(question: str, scope: str) -> list[str]:
     ]
 
 
+def build_blinded_responses(baseline: dict, rave: dict, order: tuple[str, str] | None = None):
+    systems = [
+        ("solo_baseline", baseline),
+        ("rave_hive", rave),
+    ]
+    if order is None:
+        secrets.SystemRandom().shuffle(systems)
+    else:
+        by_id = {system_id: payload for system_id, payload in systems}
+        if set(order) != set(by_id):
+            raise ValueError("blind response order must contain each system exactly once")
+        systems = [(system_id, by_id[system_id]) for system_id in order]
+
+    responses = []
+    system_key = {}
+    for index, (system_id, payload) in enumerate(systems, start=1):
+        response_id = f"response_{index:02d}"
+        responses.append({
+            "response_id": response_id,
+            "answer": payload.get("answer", ""),
+            "sources": payload.get("sources", []) or [],
+            "limitations": payload.get("limitations", []) or [],
+        })
+        system_key[response_id] = system_id
+    return responses, system_key
+
+
+def normalize_rave_sources(provider_sources, model_references):
+    normalized = []
+    for item in provider_sources or []:
+        if isinstance(item, dict):
+            source = dict(item)
+            source.setdefault("provenance", "provider_returned")
+        else:
+            source = {"url": str(item), "provenance": "provider_returned"}
+        normalized.append(source)
+    for item in model_references or []:
+        if isinstance(item, dict):
+            source = dict(item)
+            source["provenance"] = "model_reported"
+        else:
+            source = {"url": str(item), "provenance": "model_reported"}
+        normalized.append(source)
+    return normalized
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run RAVE against the preserved, completed Comparison A pilot."
@@ -277,27 +324,24 @@ def main() -> int:
         rave_model_refs = integration.get("model_reported_references", [])
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
 
-        blind_responses = [
+        normalized_rave_sources = normalize_rave_sources(rave_sources, rave_model_refs)
+        blind_responses, system_key = build_blinded_responses(
             {
-                "response_id": "response_01",
                 "answer": baseline_result["answer"],
                 "sources": baseline_result.get("sources", []),
                 "limitations": baseline_result.get("limitations", []),
             },
             {
-                "response_id": "response_02",
                 "answer": rave_answer,
-                "sources": rave_sources,
-                "model_reported_references": rave_model_refs,
+                "sources": normalized_rave_sources,
                 "limitations": rave_limitations,
             },
-        ]
+        )
         (pair_dir / "blind_responses.json").write_text(
             json.dumps(blind_responses, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         (pair_dir / "system_key.json").write_text(
-            json.dumps({"response_01": "solo_baseline", "response_02": "rave_hive"}, indent=2),
-            encoding="utf-8"
+            json.dumps(system_key, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         pair_status = (
