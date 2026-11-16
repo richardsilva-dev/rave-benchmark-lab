@@ -182,7 +182,7 @@ def ensure_rave_checkout(target: Path) -> Path:
 
 def compose_rave_answer(final_output: dict) -> str:
     fields = ("executive_answer", "integrated_analysis", "collective_integration", "conclusions")
-    return "\\n\\n".join(
+    return "\n\n".join(
         value.strip() for key in fields
         if isinstance((value := final_output.get(key)), str) and value.strip()
     )
