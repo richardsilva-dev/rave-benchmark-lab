@@ -206,7 +206,6 @@ def main() -> int:
     )
     parser.add_argument("--live", action="store_true", help="Required opt-in for the paid RAVE request")
     parser.add_argument("--baseline-run-id", default=BASELINE_RUN_ID)
-    parser.add_argument("--rave-project-path", default=os.getenv("RAVE_PROJECT_PATH", ""))
     args = parser.parse_args()
     if not args.live:
         parser.error("No API request is made unless --live is explicitly supplied")
@@ -229,10 +228,7 @@ def main() -> int:
         # This GET is non-billable and occurs before any paid research request.
         check_api_auth(child_env["RAVE_BASE_URL"], child_env["RAVE_API_KEY"])
 
-        rave_path = Path(args.rave_project_path).expanduser().resolve() if args.rave_project_path else (
-            LAB_ROOT / ".cache" / "project_RAVE"
-        )
-        rave_path = ensure_rave_checkout(rave_path)
+        rave_path = ensure_rave_checkout(LAB_ROOT / ".cache" / "project_RAVE")
         child_env["RAVE_OUTPUT_DIR"] = str(rave_path / "data" / "runs")
 
         command = [
