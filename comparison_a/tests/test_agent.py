@@ -21,3 +21,10 @@ def test_invalid_answer_not_completed():
     from solo_baseline.schemas import ResearchResult
     import pytest
     with pytest.raises(ValueError): ResearchResult("1.0","x","solo_baseline","COMPLETED","",[],[]).validate()
+
+def test_analysis_rejects_non_list_limitations(monkeypatch):
+    import json, pytest
+    agent=SoloResearchAgent(Settings("not-used"),BudgetController(Limits(100,2,30,None)))
+    content=json.dumps({"answer":"A","gaps":[],"limitations":"single string","sources":[]})
+    monkeypatch.setattr("solo_baseline.agent.post_chat_completion",lambda *a: ({}, {"content":content}))
+    with pytest.raises(ValueError): agent._analysis("Q","S","evidence")

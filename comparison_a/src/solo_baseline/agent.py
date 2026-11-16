@@ -26,7 +26,7 @@ class SoloResearchAgent:
             parsed = json.loads(raw)
         except json.JSONDecodeError as exc:
             raise ValueError("Analysis response was not valid JSON") from exc
-        if not isinstance(parsed, dict) or not isinstance(parsed.get("answer"), str) or not isinstance(parsed.get("gaps", []), list):
+        if not isinstance(parsed, dict) or not isinstance(parsed.get("answer"), str) or not isinstance(parsed.get("gaps", []), list) or not isinstance(parsed.get("limitations", []), list):
             raise ValueError("Analysis response did not match the required shape")
         return parsed
 
