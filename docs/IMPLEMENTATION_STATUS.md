@@ -1,55 +1,58 @@
-# Implementation status
+# Implementation status — RAVE paired pilot
 
-Updated 2026-11-16. Active correction branch: `fix/comparison-a-json-output-and-validation`, based on `comparison-a-budget-and-methodology-hardening`.
+Updated 2026-11-16. No live RAVE research request has been sent during this preparation.
 
-## Findings from the four recorded pilot runs
+## Completed
 
-- `solo-1e01244d0f41`: failed before useful work; hosted search returned HTTP 401 with `invalid_api_key`. This is a credential/account configuration failure, not a prompt or retry bug. The client correctly does not retry 401.
-- `solo-45ec415605c5`: blocked before network I/O because the configured reservation exceeded the run token budget.
-- `solo-5b3dc0590dfc`: completed successfully; 8 provider-returned sources; estimated cost USD 0.06093635; duration about 54.9 seconds.
-- `solo-cbd344a619ea`: search succeeded, but both analysis and JSON-repair output hit the 4,096-token completion ceiling and the final response remained invalid JSON. This is consistent with output truncation, not an authentication failure.
+- Preserved Comparison A run `solo-5b3dc0590dfc`: `COMPLETED`, 8 provider-returned sources, estimated cost USD 0.06093635, duration about 54.9 seconds. Its original artifacts remain unchanged.
+- Merged the guarded lab runner into `rave-benchmark-lab` `main` (merge commit `687a3c597bef2851d282cc929a33bccda8883d0b`).
+- The runner validates the preserved A artifact and exact question/scope, checks model mapping, search provider, pricing assumptions and budget limits, performs a non-billable `GET /models` authentication preflight, then runs only RAVE. It does not rerun Comparison A.
+- The runner clones RAVE into ignored `.cache/project_RAVE`, pins an exact commit, and leaves the user's separate local RAVE checkout untouched.
+- Pair artifacts are local and ignored. `blind_responses.json` contains anonymized responses; `system_key.json` stores the mapping separately.
 
-## Changes in this correction branch
+## RAVE candidate implementation
 
-- Raise the analysis/JSON-repair completion-token floor to 8,192 because the failed run exhausted 4,096 output tokens.
-- Tighten the output contract: concise summary, at most 10 findings, and at most 3 evidence items per finding. This reduces malformed/truncated output while preserving the research structure.
-- Add the correction branch to GitHub Actions so the locked offline tests and security smoke checks run against the actual repository commit.
-- Preserve fail-closed authentication: HTTP 401/403 are not retried and their reservations are released. No key is written to source control or workflow logs.
+- Repository: `richardsilva-dev/project_RAVE`
+- Candidate branch: `benchmark-a-current-hive-budget-guard`
+- Pinned code commit: `ee45023a64f637e80095e08c4aab56f97d6cc835`
+- Base/frozen architecture: `independent_research` at `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`
+- GitHub Actions run `43923968510`: 40 tests passed on Python 3.11.
+- The candidate preserves the current three-specialist Hive, peer refinement, evidence provenance, independent/shared research modes, partial-run handling, single-agent command and research reuse. It is not the older budget branch based directly on `main`.
+- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated-cost ceiling. Search input reservation: 16,384 tokens.
+- Shared pilot mode: one shared search; hosted search output cap 512 tokens; specialist analysis/refinement cap 4,096 tokens per call; final synthesis cap 8,192 tokens.
+- Specialist output is bounded to 3 findings per agent, 3 evidence items per finding, 120 summary words and 250 characters per evidence excerpt.
+- Retries count as separate attempts. Transient failures retain reservations conservatively; definitive 401/403 failures release reservations. Authenticated HTTP redirects are refused. JSON repair is budgeted and output schemas are validated.
+- PR #5 is open against the frozen `independent_research` branch for review. The frozen branch itself has not been changed.
 
-## Remaining user-only gate
+## Historical diagnostics
 
-A 401 caused by `invalid_api_key` cannot be repaired by changing Python code. The credential must be replaced or re-authorized by the account owner. The secure next path is a GitHub Actions repository secret named `RAVE_API_KEY` for any future remote live workflow; never commit the key or paste it into chat. The existing local `.env` remains local and ignored.
+- `solo-1e01244d0f41`: HTTP 401 `invalid_api_key`; no research sources returned. The client correctly did not retry authentication failure.
+- `solo-45ec415605c5`: blocked before network I/O by token-budget reservation.
+- `solo-cbd344a619ea`: search completed, but analysis/JSON-repair output hit the 4,096-token ceiling and final JSON remained invalid.
+- `solo-5b3dc0590dfc`: successful integration pilot described above.
 
-## Experimental status
+## Remaining account-side gate
 
-The successful solo run is an integration pilot, not a matched benchmark. Before claiming that RAVE's collective architecture outperforms a single researcher, Comparison A must be paired with a RAVE run using the same question, scope, model/tool mapping, output limits and run-wide budgets. Comparison B remains blocked by its dependency audit and must not be installed or launched until the findings are reviewed.
+The local `.env` key used in the failed run may still be invalid. The runner first calls `GET /models`; if it receives HTTP 401/403, it stops before any paid research request and instructs the user to replace `RAVE_API_KEY` in the ignored local `comparison_a/.env`. Never paste the key into chat or commit it.
 
+The GPT-5 Search API token rates (USD 1.25 input / USD 10.00 output per million tokens) are user-configured estimates carried from the historical A run. The runner requires them to match the A metadata and they must be verified against the applicable billing record. The USD 0.50 run ceiling is a local estimate, not a provider-enforced cap; retain an independent OpenAI project spend limit.
 
-## RAVE candidate readiness — 2026-11-16
+## Local execution
 
-A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
-- Branch: `benchmark-a-current-hive-budget-guard`
-- Candidate commit: `7a0032bd81528aa8f69b5beb0f9771b8fc455689`
-- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
-- Shared search fails closed; no silent fallback to individual agent searches.
-- Agent analysis and JSON-repair output cap: 8,192 tokens; at most 10 findings and 3 evidence items per finding; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
-- Search tool fee is estimated at USD 0.01 per call (USD 10 per 1,000 calls), matching Comparison A. Both systems use the same shared-search system prompt.
-- A definitive 401/403 releases its token/cost reservation but still counts the failed attempt; timeouts and ambiguous failures retain reservations conservatively.
-- Request timeout is bounded by the remaining run-wide wall-clock budget.
-- The API key is never committed, printed, or included in telemetry.
+From the lab repository root, with the preserved A artifact present and `comparison_a/.env` configured:
 
-The candidate branch remains separate from `main` until its CI checks pass. It does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md).
+```powershell
+python scripts/run_rave_pilot.py --live
+```
 
-## Paired pilot readiness
+The script requires the local files `artifacts/runs/solo-5b3dc0590dfc/metadata.json` and `result.json`. If either is missing, it stops without a research request. New pair outputs are written under ignored `artifacts/pairs/`.
 
-`scripts/run_rave_pilot.py` now creates a fresh Comparison A run and then a RAVE Hive run with the same question and scope. It no longer reuses the historical `solo-5b3dc0590dfc` artifact as if it were a newly matched baseline.
+The preserved A run already incurred approximately USD 0.06093635. The new RAVE run has a local estimated ceiling of USD 0.50; the estimated maximum total for this preserved pair is approximately USD 0.56093635.
 
-Before sending paid research requests, the runner:
-1. verifies that the lab checkout is clean and records its commit;
-2. prepares the exact RAVE candidate commit and refuses to overwrite a dirty RAVE checkout;
-3. checks the local ignored `comparison_a/.env` configuration and performs a non-billable `GET /models` authentication preflight;
-4. applies the same run-wide caps to both systems: 80,000 tokens, 3 searches, 12 model calls, 180 seconds, and USD 0.50 estimated cost per system;
-5. runs Comparison A first and stops without launching RAVE if A is not `COMPLETED`;
-6. verifies question, scope, model mapping, search price assumptions, and persisted artifacts before creating a pair manifest.
+## Evaluation limits
 
-The run is a one-question pilot, not the ten-question protocol. It creates blinded response files and a separate system key, but no blind independent quality scoring has yet been performed. A completed pair is preliminary evidence, not proof of general superiority. Comparison B remains blocked by its dependency audit and must not be installed or launched.
+This is a one-question pilot, not the ten-question benchmark in the 30-day protocol. The historical A artifact does not record its exact source commit or resolved output cap; RAVE uses a different internal per-call output allocation even though the run-wide ceiling is matched. No blind independent quality scoring has been performed. A completed pair is preliminary evidence only and cannot establish general superiority. Share only `blind_responses.json` for blinded evaluation; keep `system_key.json` separate until scoring is complete.
+
+## Comparison B
+
+Comparison B remains blocked. Its upstream lock audit reported 89 known vulnerabilities and two archived dependency statuses. The environment was not installed or executed; do not launch it until the dependency findings are reviewed.

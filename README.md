@@ -34,19 +34,8 @@ python scripts/run_rave_pilot.py --live
 
 O executor preserva e reutiliza a execução A existente; não a executa novamente. Antes de qualquer pesquisa paga, faz uma chamada `GET /models` para validar a autenticação. Em caso de HTTP 401/403, encerra sem iniciar a pesquisa. O código RAVE é clonado para `.cache/project_RAVE` e fixado no commit documentado; o checkout local existente do usuário não é alterado. Os novos artefatos do par ficam em `artifacts/pairs/` e não são enviados ao Git. O arquivo `blind_responses.json` contém as duas respostas sem identificar os sistemas; `system_key.json` guarda o mapeamento separado para permitir avaliação cega. Não envie a chave do sistema junto com as respostas antes da avaliação.
 
+O piloto preserva o custo já incorrido pela execução A (aproximadamente USD 0.06093635) e limita a nova execução RAVE a USD 0.50 estimados. O teto estimado total do par é aproximadamente USD 0.56093635. Esse limite é local, não um bloqueio de cobrança do provedor; mantenha um limite de gastos independente no projeto OpenAI e confirme as tarifas de busca no registro de cobrança.
+
 ## Status GitHub
 
-Repositório remoto privado ativo. A branch `comparison-a-budget-and-methodology-hardening` contém as correções e o executor do piloto; os artefatos de execução permanecem locais e são ignorados pelo Git.
-
-
-## Paired RAVE pilot
-
-Prepare the ignored `comparison_a/.env` using `comparison_a/.env.example` and keep `RAVE_API_KEY` private. The preserved A artifact `solo-5b3dc0590dfc` must exist locally. Then run the pilot explicitly:
-
-```powershell
-python scripts/run_rave_pilot.py --live
-```
-
-The runner reuses the completed A artifact without rerunning or modifying it, performs a non-billable `GET /models` authentication preflight, then executes only the pinned RAVE Hive candidate with the same question, scope, model mapping and run-wide budget. An HTTP 401/403 stops before paid research. Artifacts are written under ignored `artifacts/pairs/`; do not commit them without a privacy/secrets review.
-
-The historical A run already incurred approximately USD 0.06093635. The new RAVE run has a separate local estimated ceiling of USD 0.50, so the maximum estimated total for this preserved pair is approximately USD 0.56093635, not USD 1.00. This is not a provider-enforced billing cap; keep an independent OpenAI project spend limit enabled. GPT-5 Search API token rates remain user-configured (USD 1.25 input / USD 10.00 output per million tokens) and must be verified against the applicable billing record.
+Repositório remoto privado ativo. O executor do piloto está incorporado em `main` pelo commit `687a3c597bef2851d282cc929a33bccda8883d0b`. O código RAVE usado no piloto permanece isolado na branch `benchmark-a-current-hive-budget-guard`, fixada no commit `ee45023a64f637e80095e08c4aab56f97d6cc835`.
