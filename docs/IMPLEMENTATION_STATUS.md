@@ -29,12 +29,12 @@ The successful solo run is an integration pilot, not a matched benchmark. Before
 
 A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
 - Branch: `benchmark-a-global-budget-guard`
-- Pinned candidate commit: `831b5b45321ec827d9383d9a73c685740315badf`
-- Validation: GitHub Actions run `43920287460` completed successfully (25 tests).
+- Pinned candidate commit: `3b7a231515b63fa8caa4d8a4cbabc68d589b2a8b`
+- Validation: GitHub Actions run `43922045558` completed successfully (26 tests).
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
 - Shared search fails closed; no silent fallback to individual agent searches.
 - Agent analysis cap: 4,096 tokens; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
-- JSON code fences on one line and response-read connection failures now have regression coverage.
+- JSON code fences on one line, response-read connection failures and refusal of authenticated HTTP redirects now have regression coverage.
 
 The candidate branch is not merged into `main` and does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md). The branch is pinned by the lab runner for this pilot.
 
