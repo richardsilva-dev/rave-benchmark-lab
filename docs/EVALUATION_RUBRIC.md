@@ -43,7 +43,7 @@ A longer answer or more agent messages is not evidence of collective gain by its
 
 ## Independent reference checklist
 
-Before scoring, construct a short reference map from primary and institutional sources without using either answer as the source of truth. For this pilot, record that the map is retrospective relative to A. Include:
+Use the source-based checklist in [REFERENCE_MAP_PILOT.md](REFERENCE_MAP_PILOT.md), prepared before the RAVE output from primary and institutional sources rather than from either answer. For this pilot, record that the map is retrospective relative to A. Include:
 
 - core benefits and the conditions under which they are supported;
 - risks and failure modes;
