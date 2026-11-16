@@ -96,6 +96,7 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
         "RAVE_BASE_URL": base_url,
         "RAVE_MODEL": analysis_model,
         "RAVE_WEB_SEARCH": "true",
+        "RAVE_RESEARCH_MODE": "shared_research",
         "RAVE_WEB_SEARCH_MODEL": search_model,
         "RAVE_WEB_SEARCH_CONTEXT_SIZE": "low",
         "RAVE_WEB_SEARCH_MAX_OUTPUT_TOKENS": "512",
