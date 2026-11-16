@@ -23,3 +23,23 @@ A 401 caused by `invalid_api_key` cannot be repaired by changing Python code. Th
 ## Experimental status
 
 The successful solo run is an integration pilot, not a matched benchmark. Before claiming that RAVE's collective architecture outperforms a single researcher, Comparison A must be paired with a RAVE run using the same question, scope, model/tool mapping, output limits and run-wide budgets. Comparison B remains blocked by its dependency audit and must not be installed or launched until the findings are reviewed.
+
+
+## RAVE candidate readiness — 2026-11-16
+
+A separate candidate implementation is available in `richardsilva-dev/project_RAVE`:
+- Branch: `benchmark-a-global-budget-guard`
+- Pinned candidate commit: `831b5b45321ec827d9383d9a73c685740315badf`
+- Validation: GitHub Actions run `43920287460` completed successfully (25 tests).
+- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds, and USD 0.50 estimated cost.
+- Shared search fails closed; no silent fallback to individual agent searches.
+- Agent analysis cap: 4,096 tokens; final synthesis cap: 8,192 tokens; hosted search cap: 512 tokens.
+- JSON code fences on one line and response-read connection failures now have regression coverage.
+
+The candidate branch is not merged into `main` and does not replace the frozen RAVE reference in [ARCHITECTURE.md](ARCHITECTURE.md). The branch is pinned by the lab runner for this pilot.
+
+## Next live gate
+
+The lab runner `scripts/run_rave_pilot.py` validates and reuses the completed A artifact `solo-5b3dc0590dfc`, checks the local pricing configuration, performs a non-billable `GET /models` authentication preflight, and only then launches one RAVE Hive run with the same question and scope. It does not rerun or modify Comparison A. An HTTP 401 stops before any paid research request; the only required intervention in that case is replacing the local `RAVE_API_KEY`.
+
+The run is still a one-question pilot. The historical A artifact does not record its exact source commit, and no blind independent quality scoring has been performed. A completed pair is preliminary evidence only, not proof of general superiority. Comparison B remains blocked by the dependency audit.
