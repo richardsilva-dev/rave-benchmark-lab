@@ -29,7 +29,7 @@ Every live invocation requires explicit limits for total tokens, search attempts
 - max search attempts: 3 (includes retry attempts)
 - max wall time: 180 seconds
 - max estimated cost: USD 0.50
-- max model-call attempts: 5 (includes retries and JSON repair)
+- max model-call attempts: 12 (includes retries and JSON repair)
 - search context: low; search output: 512 tokens; analysis output: 4,096 tokens
 
 The preflight reserves UTF-8 prompt bytes, each request's completion cap and 16,384 additional input tokens for hosted search content. Provider-side search context is variable and can exceed that allowance. After each successful response, provider-reported usage and locally estimated cost are reconciled. Failed attempts retain their reservations conservatively. This is a local guardrail, not a provider-enforced billing cap. Configure a separate OpenAI project spend limit before making paid calls.
@@ -49,10 +49,10 @@ The CLI prints the artifact directory. Each run writes `result.json` and `metada
 - Models: `gpt-4.1-mini` and `gpt-5-search-api`.
 - Search context: `low`.
 - Search output cap: 512 tokens.
-- Analysis output cap: 4,096 tokens.
+- Analysis output cap: 8,192 tokens.
 - Temperature: 0.2.
 - Search system instruction is aligned with `project_RAVE/rave/research.py`.
 - Single-agent system instruction and JSON schema are aligned with `project_RAVE/rave/agents/single.py`.
 - Malformed JSON repair follows the RAVE BaseAgent repair strategy and consumes the same token/cost budget.
 
-The historical RAVE run from 2026-11-11 predates the matched 4,096-token analysis cap. Do not interpret it as a fully matched result until RAVE is rerun with the same cap and experimental limits. This first solo run is an integration pilot only, not an official comparative result.
+The preserved successful pilot `solo-5b3dc0590dfc` remains unchanged. Its exact source commit and resolved per-call output cap were not recorded in the artifact, so a first RAVE pair must be treated as preliminary. The current Comparison A code uses an 8,192-token analysis cap; the pinned RAVE candidate uses 4,096 tokens per specialist analysis and 8,192 for final synthesis under the same 80,000-token run-wide ceiling. This one-question pilot is not an official multi-question benchmark.
