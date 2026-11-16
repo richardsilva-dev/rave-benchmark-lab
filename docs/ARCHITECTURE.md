@@ -31,3 +31,13 @@ One `ResearchRequest` is sent independently to each system adapter. The adapter 
 ## Reproducibility
 
 Before any formal run, record exact code refs, Python/uv versions, resolved lockfiles, model IDs, endpoint class, search settings, environment variable names (never values), budgets, start/end times and status. Store per-run artifacts locally and keep them out of Git unless explicitly reviewed for secrets and privacy.
+
+
+## Candidate RAVE build for the first paired pilot
+
+The frozen reference above remains unchanged. The first live pilot uses a separate candidate build from `project_RAVE`:
+- Branch `benchmark-a-global-budget-guard`
+- Commit `831b5b45321ec827d9383d9a73c685740315badf`
+- GitHub Actions: 25 tests passed at run `43920287460`
+
+This candidate adds a run-wide budget and reliability fixes. The lab runner checks out this exact commit in an ignored local cache, leaving the user's other RAVE checkout untouched. It reuses the existing successful Comparison A artifact and runs only the Hive candidate. The candidate is not the frozen reference and must not be described as the same code version as the historical RAVE results.
