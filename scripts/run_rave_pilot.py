@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 LAB_ROOT = Path(__file__).resolve().parents[1]
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-global-budget-guard"
-RAVE_COMMIT = "4dede5229fb5efc6aa7872fc9c4969e05b43d599"
+RAVE_COMMIT = "bf107f1b72ec7723ec586308532bde10f134af97"
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
     "max_tokens": 80000,
