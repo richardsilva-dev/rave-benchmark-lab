@@ -82,3 +82,13 @@ def test_compose_rave_answer_keeps_all_comparable_final_sections():
         "gaps_and_limitations": ["Not part of answer body"],
     })
     assert answer == "Executive\\n\\nAnalysis\\n\\nCollective\\n\\nConclusion"
+
+
+def test_blinded_response_order_is_randomizable_and_key_is_separate():
+    baseline = {"answer": "A", "sources": [{"url": "https://a.example"}], "limitations": []}
+    rave = {"answer": "B", "sources": [{"url": "https://b.example"}], "limitations": []}
+    responses, key = pilot.build_blinded_responses(baseline, rave, ("rave_hive", "solo_baseline"))
+    assert [item["response_id"] for item in responses] == ["response_01", "response_02"]
+    assert [item["answer"] for item in responses] == ["B", "A"]
+    assert key == {"response_01": "rave_hive", "response_02": "solo_baseline"}
+    assert all(set(item) == {"response_id", "answer", "sources", "limitations"} for item in responses)
