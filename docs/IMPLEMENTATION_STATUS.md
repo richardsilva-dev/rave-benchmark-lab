@@ -1,31 +1,25 @@
 # Implementation status
 
-Updated 2026-11-13. Private repository: https://github.com/richardsilva-dev/rave-benchmark-lab. Current preparation work is isolated on branch `comparison-a-budget-and-methodology-hardening`; no changes are merged into `main` or the RAVE production repository.
+Updated 2026-11-16. Active correction branch: `fix/comparison-a-json-output-and-validation`, based on `comparison-a-budget-and-methodology-hardening`.
 
-## Comparison A hardening on this branch
+## Findings from the four recorded pilot runs
 
-- One-agent baseline aligned to RAVE's shared search, analysis schema and JSON repair strategy.
-- Token and estimated-cost reservations occur before each outbound request; retries retain reservations conservatively.
-- A global model-call-attempt limit is now supported and counts retries and JSON repair calls.
-- CLI requires explicit token, search, wall-time, cost and model-call limits; maximum allowed local run-cost argument is USD 0.50.
-- GPT-4.1-mini rates and Web Search fee are configured from the official OpenAI pricing page. GPT-5 Search API has no distinct token-rate row on that page, so live execution requires explicit local input/output rates; unknown rates fail closed.
-- Suggested first pilot limits: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated cost.
-- Metadata records configured limits, pricing version/rates, reserved search context and estimated cost.
+- `solo-1e01244d0f41`: failed before useful work; hosted search returned HTTP 401 with `invalid_api_key`. This is a credential/account configuration failure, not a prompt or retry bug. The client correctly does not retry 401.
+- `solo-45ec415605c5`: blocked before network I/O because the configured reservation exceeded the run token budget.
+- `solo-5b3dc0590dfc`: completed successfully; 8 provider-returned sources; estimated cost USD 0.06093635; duration about 54.9 seconds.
+- `solo-cbd344a619ea`: search succeeded, but both analysis and JSON-repair output hit the 4,096-token completion ceiling and the final response remained invalid JSON. This is consistent with output truncation, not an authentication failure.
 
-## Important limitations
+## Changes in this correction branch
 
-- Local cost and token ceilings are estimates. Provider-supplied search context is variable, and no local estimator can guarantee a hard provider billing cap. Configure an OpenAI project spend limit independently.
-- The GPT-5 Search API token rates must be verified in the user's billing/pricing context or explicitly marked as a proxy assumption before the run.
-- GitHub source edits are not equivalent to a local test run. Run the locked test suite in the local VS Code checkout before any paid API call.
-- The RAVE runtime itself still needs a matching run-wide token/cost budget implementation before a fully budget-matched paired experiment. This pilot only validates the solo baseline.
-- Comparison B remains blocked by the documented dependency/security findings. Do not install or execute it.
+- Raise the analysis/JSON-repair completion-token floor to 8,192 because the failed run exhausted 4,096 output tokens.
+- Tighten the output contract: concise summary, at most 10 findings, and at most 3 evidence items per finding. This reduces malformed/truncated output while preserving the research structure.
+- Add the correction branch to GitHub Actions so the locked offline tests and security smoke checks run against the actual repository commit.
+- Preserve fail-closed authentication: HTTP 401/403 are not retried and their reservations are released. No key is written to source control or workflow logs.
 
-## First paid pilot gate
+## Remaining user-only gate
 
-1. Configure the two GPT-5 Search API rate variables in the local ignored `.env`.
-2. Verify the OpenAI project spend limit is enabled.
-3. Run locked pytest and offline smoke checks.
-4. Execute exactly one capped Comparison A pilot with the documented prior question and scope.
-5. Inspect both `result.json` and `metadata.json`; only `COMPLETED` is a valid integration result.
+A 401 caused by `invalid_api_key` cannot be repaired by changing Python code. The credential must be replaced or re-authorized by the account owner. The secure next path is a GitHub Actions repository secret named `RAVE_API_KEY` for any future remote live workflow; never commit the key or paste it into chat. The existing local `.env` remains local and ignored.
 
-This pilot is not official benchmark data and must not be used for a comparative claim.
+## Experimental status
+
+The successful solo run is an integration pilot, not a matched benchmark. Before claiming that RAVE's collective architecture outperforms a single researcher, Comparison A must be paired with a RAVE run using the same question, scope, model/tool mapping, output limits and run-wide budgets. Comparison B remains blocked by its dependency audit and must not be installed or launched until the findings are reviewed.
