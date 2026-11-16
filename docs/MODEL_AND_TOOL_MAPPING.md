@@ -14,3 +14,8 @@ At the pinned Open Deep Research commit, `Configuration` exposes `allow_clarific
 ## Current RAVE benchmark candidate
 
 The lab runner pins `project_RAVE` branch `benchmark-a-current-hive-budget-guard` at commit `ee45023a64f637e80095e08c4aab56f97d6cc835`, based on the frozen `independent_research` implementation. It preserves the current three-specialist Hive, peer refinement, provenance and partial-run handling. The first pilot uses `shared_research` mode: one shared hosted search followed by three specialists, peer refinement and final synthesis. It has a run-wide ceiling of 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated cost. Specialist analysis/refinement is capped at 4,096 tokens; final synthesis at 8,192; hosted search output at 512. These internal allocations differ from the solo system, so the comparison is preliminary even though the global budget is matched.
+
+
+## Condições experimentais pendentes
+
+A direção atual no Notion especifica A (agente único), B (múltiplos agentes simples com integração básica) e C (RAVE com cooperação, núcleo híbrido, verificação e integração progressiva). O executor atual cobre A e C. B ainda não existe no código e deve ser implementado antes de declarar concluída a comparação completa. O piloto A/C é útil como verificação inicial, mas não isola o ganho específico de peer refinement.
