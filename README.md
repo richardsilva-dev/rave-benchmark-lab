@@ -37,3 +37,16 @@ O executor preserva e reutiliza a execução A existente; não a executa novamen
 ## Status GitHub
 
 Repositório remoto privado ativo. A branch `comparison-a-budget-and-methodology-hardening` contém as correções e o executor do piloto; os artefatos de execução permanecem locais e são ignorados pelo Git.
+
+
+## Paired RAVE pilot
+
+After the RAVE candidate and Comparison A branches are merged and the local checkouts are synchronized, prepare the ignored `comparison_a/.env` using `comparison_a/.env.example`. Keep `RAVE_API_KEY` private. Then run the paired pilot explicitly:
+
+```powershell
+uv run --project comparison_a --locked --extra dev python scripts/run_rave_pilot.py --live
+```
+
+The runner performs a non-billable authentication preflight before paid research, generates a fresh solo run, then a RAVE Hive run with the same question, scope, model mapping and run-wide caps. It stops safely on authentication, budget, or incomplete-result failures. Artifacts are written under ignored `artifacts/runs/` and `artifacts/pairs/`; do not commit them without a privacy/secrets review.
+
+Each system has its own USD 0.50 estimated cap, so the pair may consume up to USD 1.00 in total. Keep an independent OpenAI project spend limit enabled. The GPT-5 Search API token rates in the example configuration are the user-configured values from the prior pilot (USD 1.25 input / USD 10.00 output per million tokens); verify them against the applicable billing record before the live run.
