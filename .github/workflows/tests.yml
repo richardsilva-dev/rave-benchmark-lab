@@ -1,0 +1,38 @@
+name: comparison-a-tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - comparison-a-budget-and-methodology-hardening
+      - fix/comparison-a-json-output-and-validation
+  workflow_dispatch:
+
+jobs:
+  comparison-a:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: comparison_a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev
+      - name: Run offline tests
+        run: uv run --locked --extra dev pytest -p no:cacheprovider -q
+      - name: Run offline security smoke checks
+        run: uv run python tests/offline_smoke.py
+      - name: Validate shared JSON schemas
+        working-directory: .
+        run: python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('contracts').glob('*.schema.json')]; print('schemas valid')"
+      - name: Run offline RAVE pilot orchestration tests
+        working-directory: .
+        run: uv run --project comparison_a --locked --extra dev python -m pytest -q tests/test_run_rave_pilot.py
