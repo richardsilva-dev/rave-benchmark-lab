@@ -247,7 +247,37 @@ def main() -> int:
         rave_budget = rave_payload.get("run_budget", rave_output.get("run_budget", {}))
         rave_meta = rave_payload.get("metadata", rave_output.get("metadata", {}))
         rave_status = rave_payload.get("execution_status", rave_output.get("execution_status", "INVALID"))
-        pair_status = "COMPLETED" if completed.returncode == 0 and rave_status == "COMPLETED" else "INELIGIBLE"
+        rave_final = rave_payload.get("final_output", rave_output.get("final_output", {}))
+        rave_answer = rave_final.get("executive_answer", "") if isinstance(rave_final, dict) else ""
+        rave_sources = rave_payload.get("integration", {}).get("web_sources", [])
+        rave_model_refs = rave_payload.get("integration", {}).get("model_reported_references", [])
+        rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
+        blind_responses = [
+            {
+                "response_id": "response_01",
+                "answer": baseline_result["answer"],
+                "sources": baseline_result.get("sources", []),
+                "limitations": baseline_result.get("limitations", []),
+            },
+            {
+                "response_id": "response_02",
+                "answer": rave_answer,
+                "sources": rave_sources,
+                "model_reported_references": rave_model_refs,
+                "limitations": rave_limitations,
+            },
+        ]
+        (pair_dir / "blind_responses.json").write_text(
+            json.dumps(blind_responses, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (pair_dir / "system_key.json").write_text(
+            json.dumps({"response_01": "solo_baseline", "response_02": "rave_hive"}, indent=2),
+            encoding="utf-8"
+        )
+        pair_status = (
+            "COMPLETED" if completed.returncode == 0 and rave_status == "COMPLETED"
+            and isinstance(rave_answer, str) and rave_answer.strip() else "INELIGIBLE"
+        )
         manifest = {
             "schema_version": "1.0",
             "pair_id": pair_id,
@@ -278,7 +308,9 @@ def main() -> int:
                 "agent_count": len(rave_payload.get("agent_results", rave_output.get("agent_results", []))),
                 "message_count": len(rave_payload.get("messages", [])),
                 "sources_count": len(rave_payload.get("integration", {}).get("web_sources", [])),
-                "artifact": "rave_run.json" if (pair_dir / "rave_run.json").exists() else None,
+                "artifact": "rave_run.json",
+                "blind_responses": "blind_responses.json",
+                "system_key": "system_key.json",
             },
             "shared_profile": {
                 "analysis_model": "gpt-4.1-mini",
