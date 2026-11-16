@@ -13,7 +13,7 @@ def _load_dotenv(path: str = ".env") -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip("\"'").strip())
+        os.environ.setdefault(key.strip(), value.strip().strip("\\"'").strip())
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class Settings:
     timeout_seconds: int = 90
     search_context_size: str = "low"
     search_max_output_tokens: int = 512
-    analysis_max_output_tokens: int = 4096
+    analysis_max_output_tokens: int = 8192
     search_input_reserve_tokens: int = 16384
 
     @classmethod
@@ -34,7 +34,9 @@ class Settings:
         try:
             timeout = int(os.getenv("RAVE_TIMEOUT_SECONDS", "90"))
             search_out = int(os.getenv("RAVE_SEARCH_MAX_OUTPUT_TOKENS", "512"))
-            analysis_out = int(os.getenv("RAVE_ANALYSIS_MAX_OUTPUT_TOKENS", "4096"))
+            # 4,096 repeatedly truncated valid research JSON in the pilot.
+            # Keep an 8,192-token floor for both analysis and JSON repair.
+            analysis_out = max(8192, int(os.getenv("RAVE_ANALYSIS_MAX_OUTPUT_TOKENS", "8192")))
             search_reserve = int(os.getenv("RAVE_SEARCH_INPUT_RESERVE_TOKENS", "16384"))
         except ValueError as exc:
             raise ValueError("Timeout and token reservation settings must be integers") from exc
