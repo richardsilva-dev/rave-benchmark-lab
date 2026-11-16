@@ -4,7 +4,11 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, comparison-a-budget-and-methodology-hardening]
+    branches:
+      - main
+      - comparison-a-budget-and-methodology-hardening
+      - fix/comparison-a-json-output-and-validation
+  workflow_dispatch:
 
 jobs:
   comparison-a:
