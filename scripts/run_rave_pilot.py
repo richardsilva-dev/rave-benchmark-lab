@@ -7,6 +7,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -140,25 +141,42 @@ def check_api_auth(base_url: str, api_key: str) -> None:
         headers={"Authorization": f"Bearer {api_key}"},
         method="GET",
     )
-    try:
-        with _open_preflight(request, timeout=20) as response:
-            if response.status != 200:
-                raise RuntimeError(f"OpenAI authentication preflight returned HTTP {response.status}")
-            response.read(1024)
-    except urllib.error.HTTPError as exc:
-        if exc.code in (401, 403):
-            raise RuntimeError(
-                f"OpenAI authentication preflight failed with HTTP {exc.code}. "
-                "No paid research request was sent. Replace RAVE_API_KEY in comparison_a/.env."
-            ) from exc
-        raise RuntimeError(
-            f"OpenAI authentication preflight could not complete (HTTP {exc.code}); no research request was sent."
-        ) from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise RuntimeError(
-            f"OpenAI authentication preflight could not reach the provider ({type(exc).__name__}); "
-            "no research request was sent."
-        ) from exc
+    # This is a read-only, non-billable authentication probe. Retry only transient
+    # transport/server failures; never retry 401/403 or proceed to paid research
+    # unless this probe returns HTTP 200.
+    delays = (0, 2, 5)
+    last_error = None
+    for attempt, delay in enumerate(delays, start=1):
+        if delay:
+            time.sleep(delay)
+        try:
+            with _open_preflight(request, timeout=30) as response:
+                if response.status != 200:
+                    raise RuntimeError(
+                        f"OpenAI authentication preflight returned HTTP {response.status}"
+                    )
+                response.read(1024)
+                return
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise RuntimeError(
+                    f"OpenAI authentication preflight failed with HTTP {exc.code}. "
+                    "No paid research request was sent. Replace RAVE_API_KEY in comparison_a/.env."
+                ) from exc
+            if exc.code not in (408, 500, 502, 503, 504):
+                raise RuntimeError(
+                    f"OpenAI authentication preflight could not complete (HTTP {exc.code}); "
+                    "no research request was sent."
+                ) from exc
+            last_error = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last_error = type(exc).__name__
+        if attempt == len(delays):
+            break
+    raise RuntimeError(
+        f"OpenAI authentication preflight failed after {len(delays)} read-only attempts "
+        f"({last_error}); no research request was sent."
+    )
 
 
 def run_git(args: list[str], cwd: Path | None = None) -> str:
