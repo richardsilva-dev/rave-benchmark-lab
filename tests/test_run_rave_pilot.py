@@ -74,7 +74,7 @@ def test_validate_baseline_reuses_the_preserved_completed_run(tmp_path, monkeypa
         "analysis_model": "gpt-4.1-mini",
         "search_model": "gpt-5-search-api",
         "search_provider": "openai_hosted_web_search",
-        "search_input_reservation_tokens": 16384,
+        "search_input_reservation_tokens": 8192,
         "budget_limits": {
             "max_tokens": 80000,
             "max_searches": 3,
@@ -153,3 +153,29 @@ def test_preflight_redirect_handler_refuses_redirects():
     handler = pilot._NoRedirectHandler()
     request = urllib.request.Request("https://api.openai.com/v1/models")
     assert handler.redirect_request(request, None, 302, "Found", {}, "https://attacker.example/collect") is None
+
+
+def test_auth_preflight_retries_transient_504_then_succeeds(monkeypatch):
+    calls = {"count": 0}
+    def flaky(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise urllib.error.HTTPError(
+                "https://api.openai.com/v1/models", 504, "Gateway Timeout", {}, io.BytesIO(b"")
+            )
+        return io.BytesIO(b'{"data":[]}')
+    monkeypatch.setattr(pilot, "_open_preflight", flaky)
+    monkeypatch.setattr(pilot.time, "sleep", lambda _: None)
+    pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
+    assert calls["count"] == 2
+
+
+def test_auth_preflight_504_exhaustion_is_not_reported_as_invalid_key(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://api.openai.com/v1/models", 504, "Gateway Timeout", {}, io.BytesIO(b"")
+        )
+    monkeypatch.setattr(pilot, "_open_preflight", unavailable)
+    monkeypatch.setattr(pilot.time, "sleep", lambda _: None)
+    with pytest.raises(RuntimeError, match="not evidence that the API key is invalid"):
+        pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
