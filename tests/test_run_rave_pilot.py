@@ -163,7 +163,9 @@ def test_auth_preflight_retries_transient_504_then_succeeds(monkeypatch):
             raise urllib.error.HTTPError(
                 "https://api.openai.com/v1/models", 504, "Gateway Timeout", {}, io.BytesIO(b"")
             )
-        return io.BytesIO(b'{"data":[]}')
+        response = io.BytesIO(b'{"data":[]}')
+        response.status = 200
+        return response
     monkeypatch.setattr(pilot, "_open_preflight", flaky)
     monkeypatch.setattr(pilot.time, "sleep", lambda _: None)
     pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
