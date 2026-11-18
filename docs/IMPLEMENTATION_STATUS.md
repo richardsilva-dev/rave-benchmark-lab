@@ -14,11 +14,11 @@ Updated 2026-11-18. No live RAVE research request has been sent during this prep
 
 - Repository: `richardsilva-dev/project_RAVE`
 - Candidate branch: `benchmark-a-current-hive-budget-guard`
-- Pinned code commit: `0f7ad66f43eb427bcb66d21a08421b243f6ca0e5` (PRs #6 and #7 merged into the candidate branch)
+- Pinned code commit: `fdd1b24e6c70c6dc076faa05b1788a9796ebf1bb` (PRs #6 and #7 merged into the candidate branch)
 - Base/frozen architecture: `independent_research` at `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`
 - PR #7 corrigiu a reserva conservadora de tokens (estimativa por bytes UTF-8 / 3, arredondada para cima); o uso informado pelo provedor continua sendo a fonte autoritativa na reconciliação do orçamento.
-- GitHub Actions run `44353374252` on the exact pinned commit `0f7ad66f43eb427bcb66d21a08421b243f6ca0e5`: 43 tests passed on Python 3.11.
-- The candidate preserves the current three-specialist Hive, peer refinement, evidence provenance, independent/shared research modes, partial-run handling, single-agent command and research reuse. It is not the older budget branch based directly on `main`.
+- GitHub Actions run `44356437797` on the exact pinned commit `fdd1b24e6c70c6dc076faa05b1788a9796ebf1bb`: 44 tests passed on Python 3.11.
+- The candidate preserves the current three-specialist Hive, peer refinement, evidence provenance, independent/shared research modes, partial-run handling, single-agent command and research reuse. Failed-agent artifacts now retain bounded, credential-free RuntimeError diagnostics; regression coverage is included. It is not the older budget branch based directly on `main`.
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated-cost ceiling. Search input reservation for the paired lab profile: 8,192 tokens, matching the preserved baseline metadata.
 - Shared pilot mode: one shared search; hosted search output cap 512 tokens; specialist analysis/refinement cap 4,096 tokens per call; final synthesis cap 8,192 tokens.
 - Specialist output is bounded to 3 findings per agent, 3 evidence items per finding, 120 summary words and 250 characters per evidence excerpt.
