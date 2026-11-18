@@ -8,6 +8,7 @@ on:
       - main
       - comparison-a-budget-and-methodology-hardening
       - fix/comparison-a-json-output-and-validation
+      - chore/pin-validated-rave-synthesis
   workflow_dispatch:
 
 jobs:

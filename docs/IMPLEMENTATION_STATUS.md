@@ -1,6 +1,6 @@
 # Implementation status — RAVE paired pilot
 
-Updated 2026-11-16. No live RAVE research request has been sent during this preparation.
+Updated 2026-11-18. No live RAVE research request has been sent during this preparation.
 
 ## Completed
 
@@ -14,15 +14,15 @@ Updated 2026-11-16. No live RAVE research request has been sent during this prep
 
 - Repository: `richardsilva-dev/project_RAVE`
 - Candidate branch: `benchmark-a-current-hive-budget-guard`
-- Pinned code commit: `ee45023a64f637e80095e08c4aab56f97d6cc835`
+- Pinned code commit: `2e07d2dbc1afc807b43f7bb40c9726f87512112f` (PR #6 merged into the candidate branch)
 - Base/frozen architecture: `independent_research` at `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`
-- GitHub Actions run `43923968510`: 40 tests passed on Python 3.11.
+- GitHub Actions run `44338038030` on the exact pinned commit `2e07d2dbc1afc807b43f7bb40c9726f87512112f`: 41 tests passed on Python 3.11.
 - The candidate preserves the current three-specialist Hive, peer refinement, evidence provenance, independent/shared research modes, partial-run handling, single-agent command and research reuse. It is not the older budget branch based directly on `main`.
-- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated-cost ceiling. Search input reservation: 16,384 tokens.
+- Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated-cost ceiling. Search input reservation for the paired lab profile: 8,192 tokens, matching the preserved baseline metadata.
 - Shared pilot mode: one shared search; hosted search output cap 512 tokens; specialist analysis/refinement cap 4,096 tokens per call; final synthesis cap 8,192 tokens.
 - Specialist output is bounded to 3 findings per agent, 3 evidence items per finding, 120 summary words and 250 characters per evidence excerpt.
 - Retries count as separate attempts. Transient failures retain reservations conservatively; definitive 401/403 failures release reservations. Authenticated HTTP redirects are refused. JSON repair is budgeted and output schemas are validated.
-- PR #5 is open against the frozen `independent_research` branch for review. The frozen branch itself has not been changed.
+- PR #5 is still an independent review item against the frozen `independent_research` branch. The frozen branch itself has not been changed. PR #6 (bounded synthesis context) was merged into `benchmark-a-current-hive-budget-guard`; it did not target `independent_research` or `main`.
 
 ## Historical diagnostics
 
