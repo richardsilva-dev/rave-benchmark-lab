@@ -305,7 +305,7 @@ def main() -> int:
         ]
         completed = subprocess.run(
             command, cwd=rave_path, env=child_env, capture_output=True, text=True,
-            encoding="utf-8", timeout=300,
+            encoding="utf-8", timeout=420,
         )
         try:
             rave_output = json.loads(completed.stdout)
