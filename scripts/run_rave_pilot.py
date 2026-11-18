@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 LAB_ROOT = Path(__file__).resolve().parents[1]
 RAVE_REPOSITORY = "https://github.com/richardsilva-dev/project_RAVE.git"
 RAVE_BRANCH = "benchmark-a-current-hive-budget-guard"
-RAVE_COMMIT = "2e07d2dbc1afc807b43f7bb40c9726f87512112f"
+RAVE_COMMIT = "0f7ad66f43eb427bcb66d21a08421b243f6ca0e5"
 BASELINE_RUN_ID = "solo-5b3dc0590dfc"
 QUESTION_DEFAULT = "Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências."
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
