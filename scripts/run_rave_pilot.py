@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 import os
 import secrets
 import shutil
@@ -132,33 +133,47 @@ def _open_preflight(request, timeout):
 
 
 def check_api_auth(base_url: str, api_key: str) -> None:
+    """Validate credentials without billing; retry only transient gateway/network failures."""
     parsed = urlsplit(base_url)
     if parsed.scheme != "https" or parsed.hostname != "api.openai.com" or parsed.path.rstrip("/") != "/v1":
         raise ValueError("Refusing to send an API key to an untrusted base URL")
     request = urllib.request.Request(
         "https://api.openai.com/v1/models",
-        headers={"Authorization": f"Bearer {api_key}"},
+        headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
         method="GET",
     )
-    try:
-        with _open_preflight(request, timeout=20) as response:
-            if response.status != 200:
-                raise RuntimeError(f"OpenAI authentication preflight returned HTTP {response.status}")
-            response.read(1024)
-    except urllib.error.HTTPError as exc:
-        if exc.code in (401, 403):
-            raise RuntimeError(
-                f"OpenAI authentication preflight failed with HTTP {exc.code}. "
-                "No paid research request was sent. Replace RAVE_API_KEY in comparison_a/.env."
-            ) from exc
-        raise RuntimeError(
-            f"OpenAI authentication preflight could not complete (HTTP {exc.code}); no research request was sent."
-        ) from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise RuntimeError(
-            f"OpenAI authentication preflight could not reach the provider ({type(exc).__name__}); "
-            "no research request was sent."
-        ) from exc
+    delays = (0, 2, 5)
+    last_error = None
+    for attempt, delay in enumerate(delays, start=1):
+        if delay:
+            time.sleep(delay)
+        try:
+            with _open_preflight(request, timeout=30) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"OpenAI authentication preflight returned HTTP {response.status}")
+                response.read(1024)
+                return
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise RuntimeError(
+                    f"OpenAI authentication preflight failed with HTTP {exc.code}. "
+                    "No paid research request was sent. Replace RAVE_API_KEY in comparison_a/.env."
+                ) from exc
+            if exc.code not in (408, 425, 429, 500, 502, 503, 504):
+                raise RuntimeError(
+                    f"OpenAI authentication preflight failed with non-retryable HTTP {exc.code}; "
+                    "no research request was sent."
+                ) from exc
+            last_error = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last_error = type(exc).__name__
+        if attempt == len(delays):
+            break
+    raise RuntimeError(
+        f"OpenAI authentication preflight remained unavailable after {len(delays)} attempts "
+        f"({last_error}); no research request was sent. This is a connectivity/provider failure, "
+        "not evidence that the API key is invalid."
+    )
 
 
 def run_git(args: list[str], cwd: Path | None = None) -> str:

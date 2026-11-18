@@ -153,3 +153,31 @@ def test_preflight_redirect_handler_refuses_redirects():
     handler = pilot._NoRedirectHandler()
     request = urllib.request.Request("https://api.openai.com/v1/models")
     assert handler.redirect_request(request, None, 302, "Found", {}, "https://attacker.example/collect") is None
+
+
+def test_auth_preflight_retries_transient_504_then_succeeds(monkeypatch):
+    calls = {"count": 0}
+    def flaky(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise urllib.error.HTTPError(
+                "https://api.openai.com/v1/models", 504, "Gateway Timeout", {}, io.BytesIO(b"")
+            )
+        response = io.BytesIO(b'{"data":[]}')
+        response.status = 200
+        return response
+    monkeypatch.setattr(pilot, "_open_preflight", flaky)
+    monkeypatch.setattr(pilot.time, "sleep", lambda _: None)
+    pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
+    assert calls["count"] == 2
+
+
+def test_auth_preflight_504_exhaustion_is_not_reported_as_invalid_key(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://api.openai.com/v1/models", 504, "Gateway Timeout", {}, io.BytesIO(b"")
+        )
+    monkeypatch.setattr(pilot, "_open_preflight", unavailable)
+    monkeypatch.setattr(pilot.time, "sleep", lambda _: None)
+    with pytest.raises(RuntimeError, match="not evidence that the API key is invalid"):
+        pilot.check_api_auth("https://api.openai.com/v1", "secret-value")
