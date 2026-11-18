@@ -36,3 +36,11 @@ def test_agent_fails_closed_when_analysis_json_is_invalid(monkeypatch):
     result, metadata = agent.run({"request_id": "req-2", "question": "Q", "scope": ""})
     assert result.status == "FAILED"
     assert metadata.stop_reason == "invalid json"
+
+
+def test_single_line_code_fence_is_parsed_or_left_repairable():
+    import json
+    import pytest
+    assert SoloResearchAgent._parse_json('```{"summary": "ok"}```') == {"summary": "ok"}
+    with pytest.raises(json.JSONDecodeError):
+        SoloResearchAgent._parse_json("```")
