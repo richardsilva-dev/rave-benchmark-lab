@@ -27,7 +27,7 @@ BUDGET = {
     "max_model_calls": 12,
     "max_seconds": 180,
     "max_cost_usd": 0.50,
-    "search_input_reserve_tokens": 8192,
+    "search_input_reserve_tokens": 16384,
 }
 
 
