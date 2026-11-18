@@ -30,7 +30,10 @@ def test_build_child_env_maps_comparison_a_names_to_rave_settings():
     assert env["RAVE_RESEARCH_MODE"] == "shared_research"
     assert env["RAVE_ANALYSIS_MAX_OUTPUT_TOKENS"] == "4096"
     assert env["RAVE_SYNTHESIS_MAX_OUTPUT_TOKENS"] == "8192"
-    assert env["RAVE_MAX_RUN_TOKENS"] == "80000"
+    assert env["RAVE_MAX_CONCURRENT_REQUESTS"] == "3"
+    assert env["RAVE_MAX_RUN_TOKENS"] == "120000"
+    assert env["RAVE_MAX_RUN_MODEL_CALLS"] == "16"
+    assert env["RAVE_MAX_RUN_SECONDS"] == "360"
 
 
 def test_build_child_env_rejects_missing_key():
