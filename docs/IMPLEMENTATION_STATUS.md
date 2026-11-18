@@ -16,7 +16,7 @@ Updated 2026-11-18. No live RAVE research request has been sent during this prep
 - Candidate branch: `benchmark-a-current-hive-budget-guard`
 - Pinned code commit: `2e07d2dbc1afc807b43f7bb40c9726f87512112f` (PR #6 merged into the candidate branch)
 - Base/frozen architecture: `independent_research` at `d5a7b2397bc50796ab83ee22ed326fdc087b84b2`
-- GitHub Actions run `43923968510`: 40 tests passed on Python 3.11.
+- GitHub Actions run `44338038030` on the exact pinned commit `2e07d2dbc1afc807b43f7bb40c9726f87512112f`: 41 tests passed on Python 3.11.
 - The candidate preserves the current three-specialist Hive, peer refinement, evidence provenance, independent/shared research modes, partial-run handling, single-agent command and research reuse. It is not the older budget branch based directly on `main`.
 - Run-wide guard: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated-cost ceiling. Search input reservation for the paired lab profile: 8,192 tokens, matching the preserved baseline metadata.
 - Shared pilot mode: one shared search; hosted search output cap 512 tokens; specialist analysis/refinement cap 4,096 tokens per call; final synthesis cap 8,192 tokens.
