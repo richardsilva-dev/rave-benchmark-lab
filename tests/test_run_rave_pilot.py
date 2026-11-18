@@ -74,7 +74,7 @@ def test_validate_baseline_reuses_the_preserved_completed_run(tmp_path, monkeypa
         "analysis_model": "gpt-4.1-mini",
         "search_model": "gpt-5-search-api",
         "search_provider": "openai_hosted_web_search",
-        "search_input_reservation_tokens": 16384,
+        "search_input_reservation_tokens": 8192,
         "budget_limits": {
             "max_tokens": 80000,
             "max_searches": 3,

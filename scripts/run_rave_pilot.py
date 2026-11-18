@@ -328,6 +328,36 @@ def main() -> int:
         rave_model_refs = integration.get("model_reported_references", []) or []
         rave_limitations = rave_final.get("gaps_and_limitations", []) if isinstance(rave_final, dict) else []
 
+        # A partial Hive run or failed/empty synthesis must never become a blind
+        # comparison artifact. Preserve raw diagnostics above, then stop before
+        # creating blind_responses.json or system_key.json.
+        agent_results = rave_payload.get("agent_results", rave_output.get("agent_results", []))
+        completed_agents = [
+            item for item in agent_results
+            if isinstance(item, dict) and item.get("status") == "COMPLETED"
+        ]
+        if completed.returncode != 0:
+            raise RuntimeError(
+                f"RAVE CLI exited with code {completed.returncode}; raw diagnostics were preserved, "
+                "but no comparison pair was created"
+            )
+        if rave_status != "COMPLETED":
+            detail = rave_payload.get("synthesis_error") or rave_output.get("synthesis_error") or "incomplete Hive execution"
+            raise RuntimeError(
+                f"RAVE execution status is {rave_status} ({detail}); raw diagnostics were preserved, "
+                "but no comparison pair was created"
+            )
+        if len(agent_results) != 3 or len(completed_agents) != 3:
+            raise RuntimeError(
+                f"RAVE must complete all 3 specialist agents (completed {len(completed_agents)}); "
+                "raw diagnostics were preserved, but no comparison pair was created"
+            )
+        if not rave_answer.strip():
+            raise RuntimeError(
+                "RAVE final synthesis is empty; raw diagnostics were preserved, "
+                "but no comparison pair was created"
+            )
+
         normalized_rave_sources = normalize_rave_sources(rave_sources, rave_model_refs)
         blind_responses, system_key = build_blinded_responses(
             {
