@@ -22,10 +22,10 @@ BASELINE_RUN_ID = "solo-5b3dc0590dfc"
 QUESTION_DEFAULT = "Quais são os benefícios, riscos e recomendações atuais para o uso de inteligência artificial generativa na educação? Compare fontes institucionais e apresente limites e divergências."
 QUESTION_SCOPE_DEFAULT = "Investigar a pergunta sem expandir além do necessário."
 BUDGET = {
-    "max_tokens": 80000,
+    "max_tokens": 120000,
     "max_searches": 3,
-    "max_model_calls": 12,
-    "max_seconds": 180,
+    "max_model_calls": 16,
+    "max_seconds": 360,
     "max_cost_usd": 0.50,
     "search_input_reserve_tokens": 8192,
 }
@@ -67,9 +67,11 @@ def validate_baseline(run_id: str) -> tuple[dict, dict, Path]:
     if int(metadata.get("search_input_reservation_tokens", 0)) != BUDGET["search_input_reserve_tokens"]:
         raise ValueError("Baseline hosted-search input reservation does not match the RAVE pilot profile")
     limits = metadata.get("budget_limits", {})
-    for key, expected in BUDGET.items():
-        if key == "search_input_reserve_tokens":
-            continue
+    # Keep the search-attempt and estimated-cost ceilings matched to A.
+    # RAVE needs larger token/time/call ceilings to complete its three-agent
+    # refinement and synthesis path; this is disclosed in the pair manifest.
+    for key in ("max_searches", "max_cost_usd"):
+        expected = BUDGET[key]
         if key not in limits or float(limits[key]) != float(expected):
             raise ValueError(f"Baseline budget mismatch for {key}")
     return metadata, result, artifact_dir
@@ -107,7 +109,7 @@ def build_child_env(dotenv: dict[str, str]) -> dict[str, str]:
         "RAVE_WEB_SEARCH_MAX_OUTPUT_TOKENS": "512",
         "RAVE_TEMPERATURE": "0.2",
         "RAVE_TIMEOUT_SECONDS": "90",
-        "RAVE_MAX_CONCURRENT_REQUESTS": "1",
+        "RAVE_MAX_CONCURRENT_REQUESTS": "3",
         "RAVE_ANALYSIS_MAX_OUTPUT_TOKENS": "4096",
         "RAVE_SYNTHESIS_MAX_OUTPUT_TOKENS": "8192",
         "RAVE_MAX_RUN_TOKENS": str(BUDGET["max_tokens"]),
@@ -303,7 +305,7 @@ def main() -> int:
         ]
         completed = subprocess.run(
             command, cwd=rave_path, env=child_env, capture_output=True, text=True,
-            encoding="utf-8", timeout=300,
+            encoding="utf-8", timeout=420,
         )
         try:
             rave_output = json.loads(completed.stdout)
@@ -440,6 +442,12 @@ def main() -> int:
                 "run_budget": BUDGET,
                 "rave_agent_analysis_output_tokens": 4096,
                 "rave_final_synthesis_output_tokens": 8192,
+                "resource_matching_note": (
+                    "RAVE uses 120000 tokens, 16 model-call attempts and 360 seconds; "
+                    "Comparison A used 80000 tokens, 12 attempts and 180 seconds. "
+                    "Search-attempt and estimated-cost ceilings remain matched. "
+                    "This pilot is exploratory and cannot support resource-matched efficiency claims."
+                ),
             },
             "cost_guard": {
                 "historical_baseline_cost_usd_already_incurred": baseline_cost,
@@ -452,7 +460,7 @@ def main() -> int:
             "limitations": [
                 "This is a one-question pilot, not the ten-question benchmark in the 30-day protocol.",
                 "The historical Comparison A artifact does not record its exact source commit or resolved per-call output cap.",
-                "RAVE uses a different internal allocation of per-call output tokens; the run-wide budget is capped equally.",
+                "RAVE has higher token, model-call and time ceilings than Comparison A; only the search-attempt and estimated-cost ceilings are matched. Do not interpret this pilot as a resource-matched efficiency comparison.",
                 "No blind independent quality scoring has been performed yet.",
             ],
         }
