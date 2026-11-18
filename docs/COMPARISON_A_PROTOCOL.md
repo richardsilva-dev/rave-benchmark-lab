@@ -19,7 +19,7 @@ The initial live integration pilot is limited to one run with:
 - 180 seconds wall time
 - USD 0.50 estimated cost ceiling
 
-All limits are mandatory CLI inputs. The run must fail closed before a request when a reservation would exceed a limit. Failed attempts retain reservations conservatively. The search reservation includes the configured 16,384-token allowance for provider-supplied search context, plus local prompt bytes and max completion tokens. Since provider-side context size is variable, this local estimate is not a strict provider-side token or billing cap. An OpenAI project spend limit is an additional required safeguard.
+All limits are mandatory CLI inputs. The run must fail closed before a request when a reservation would exceed a limit. Failed attempts retain reservations conservatively. The search reservation includes the configured 8,192-token allowance for provider-supplied search context, plus local prompt bytes and max completion tokens. Since provider-side context size is variable, this local estimate is not a strict provider-side token or billing cap. An OpenAI project spend limit is an additional required safeguard.
 
 ## Pricing
 
@@ -37,7 +37,7 @@ The current Notion direction defines three conditions: A — one agent; B — mu
 The first pilot reuses the already completed Comparison A run `solo-5b3dc0590dfc` and executes only the pinned RAVE Hive candidate. It does not rerun or modify A. Both outputs use the same recorded question and scope, `gpt-4.1-mini` analysis, `gpt-5-search-api` hosted search, and low search context.
 
 - Shared run-wide limits: 80,000 tokens, 3 search attempts, 12 model-call attempts, 180 seconds and USD 0.50 estimated cost for the new RAVE run.
-- Hosted-search input reservation: 16,384 tokens; hosted-search output cap: 512 tokens.
+- Hosted-search input reservation: 8,192 tokens; hosted-search output cap: 512 tokens.
 - Current Comparison A code uses an 8,192-token analysis cap, but the preserved historical A artifact does not record its exact source commit or resolved cap.
 - The pinned RAVE candidate uses a 4,096-token cap for each specialist analysis/refinement and an 8,192-token cap for final synthesis. Each agent is limited to 3 findings, 3 evidence items per finding, a 120-word summary and 250-character evidence excerpts.
 - RAVE runs in `shared_research` mode: one shared search, three specialist agents, peer refinement and final synthesis. The internal call/output allocation therefore differs from the solo system; the global run-wide ceiling is shared.
