@@ -78,19 +78,13 @@ def run_json_command(command: list[str], cwd: Path, env: dict[str, str],
         command, cwd=cwd, env=env, capture_output=True, text=True,
         encoding="utf-8", errors="replace", timeout=timeout_seconds,
     )
-    if completed.returncode != 0:
-        detail = completed.stderr[-3000:].strip()
-        raise RuntimeError(
-            f"Command exited with code {completed.returncode}. "
-            + (f"Diagnostic: {detail}" if detail else "Inspect the saved command output.")
-        )
     try:
         payload = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         detail = completed.stderr[-2000:].strip()
         raise RuntimeError(
-            "Command did not return valid JSON. "
-            + (f"Diagnostic: {detail}" if detail else "Inspect the saved command output.")
+            f"Command exited with code {completed.returncode} and did not return valid JSON. "
+            + (f"Diagnostic: {detail}" if detail else "Inspect the command output.")
         ) from exc
     if not isinstance(payload, dict):
         raise RuntimeError("Command returned JSON with an unexpected top-level type")
@@ -213,6 +207,8 @@ def run_batch(questions_path: Path) -> int:
                 solo_command, COMPARISON_A_ROOT, solo_env, budget["max_seconds"] + 90
             )
             write_process_output(pair_dir, "solo_cli", solo_completed)
+            if solo_completed.returncode != 0:
+                raise RuntimeError(f"Solo Baseline exited with code {solo_completed.returncode}")
             (pair_dir / "solo_cli_output.json").write_text(
                 json.dumps(solo_cli, ensure_ascii=False, indent=2), encoding="utf-8"
             )
@@ -242,6 +238,8 @@ def run_batch(questions_path: Path) -> int:
                 rave_command, rave_path, child_env, budget["max_seconds"] + 90
             )
             write_process_output(pair_dir, "rave_cli", rave_completed)
+            if rave_completed.returncode != 0:
+                raise RuntimeError(f"RAVE CLI exited with code {rave_completed.returncode}")
             (pair_dir / "rave_cli_output.json").write_text(
                 json.dumps(rave_cli, ensure_ascii=False, indent=2), encoding="utf-8"
             )
