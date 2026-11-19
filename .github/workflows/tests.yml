@@ -36,4 +36,4 @@ jobs:
         run: python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('contracts').glob('*.schema.json')]; print('schemas valid')"
       - name: Run offline RAVE pilot orchestration tests
         working-directory: .
-        run: uv run --project comparison_a --locked --extra dev python -m pytest -q tests/test_run_rave_pilot.py
+        run: uv run --project comparison_a --locked --extra dev python -m pytest -q tests/test_run_rave_pilot.py tests/test_run_question_batch.py
