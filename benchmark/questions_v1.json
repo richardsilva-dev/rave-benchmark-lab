@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Q1-factual-energy",
+    "category": "Pesquisa factual",
+    "question": "Quais foram as principais fontes de geração de eletricidade no Brasil nos cinco anos mais recentes com dados anuais consolidados, e qual foi a participação aproximada de cada fonte em cada ano?",
+    "scope": "Use prioritariamente dados oficiais de EPE, ONS, ANEEL ou órgãos públicos equivalentes. Informe o ano de referência, unidades e percentuais; diferencie geração efetiva de capacidade instalada; explique mudanças relevantes e lacunas nos dados."
+  },
+  {
+    "id": "Q2-comparacao-institucional",
+    "category": "Comparação institucional e regulatória",
+    "question": "Como UNESCO, OECD e União Europeia tratam a governança e o uso de inteligência artificial generativa na educação? Compare princípios, responsabilidades, supervisão humana, proteção de dados e exigências práticas.",
+    "scope": "Compare documentos e normas oficiais, identificando instituição, jurisdição, data e natureza de cada instrumento. Diferencie recomendações de obrigações legais; não trate documentos de escopos diferentes como equivalentes; destaque convergências, divergências e pontos não cobertos."
+  },
+  {
+    "id": "Q3-investigacao-mecanistica",
+    "category": "Investigação aprofundada",
+    "question": "Quais mecanismos explicam a degradação de baterias de íons de lítio ao longo do uso e do tempo, e como temperatura, profundidade de descarga, taxa de carregamento e ciclos afetam sua vida útil?",
+    "scope": "Explique os mecanismos eletroquímicos com relações causais, diferencie envelhecimento por ciclo e por calendário, conecte os mecanismos à perda de capacidade e ao aumento de resistência interna, e separe resultados bem estabelecidos de hipóteses ou resultados dependentes da química da bateria."
+  },
+  {
+    "id": "Q4-evidencias-conflitantes",
+    "category": "Investigação com evidências conflitantes",
+    "question": "O trabalho remoto aumenta ou reduz a produtividade? O que as evidências empíricas mostram e por que os resultados divergem?",
+    "scope": "Priorize estudos empíricos, revisões sistemáticas e dados de organizações reconhecidas. Diferencie produtividade medida de produtividade autorrelatada; considere ocupação, modelo híbrido ou totalmente remoto, seleção dos trabalhadores, horizonte temporal e efeitos sobre colaboração. Preserve resultados conflitantes e limitações metodológicas."
+  },
+  {
+    "id": "Q5-pesquisa-multidimensional",
+    "category": "Pesquisa multidimensional",
+    "question": "Quais são os principais impactos da expansão de data centers no Brasil, considerando energia, água, emissões, infraestrutura elétrica, economia, emprego e comunidades locais?",
+    "scope": "Analise dimensões ambientais, energéticas, econômicas, sociais e regulatórias. Diferencie impactos já observados de projeções; identifique trade-offs, distribuição geográfica, infraestrutura necessária, fontes de dados e lacunas de evidência. Compare benefícios e custos sem presumir que sejam uniformes entre regiões."
+  }
+]
