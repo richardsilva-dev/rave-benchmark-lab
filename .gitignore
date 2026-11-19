@@ -8,6 +8,7 @@ __pycache__/
 .uv-cache/
 artifacts/runs/*
 artifacts/pairs/*
+artifacts/batches/*
 .cache/
 !artifacts/README.md
 comparison_a/.coverage
