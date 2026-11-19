@@ -38,6 +38,10 @@ O piloto preserva o custo já incorrido pela execução A (aproximadamente USD 0
 
 A direção mais recente no Notion define três condições (A: agente único; B: múltiplos agentes simples com integração básica; C: RAVE completo). Este piloto cobre apenas A versus C; B ainda não foi implementado. Portanto, o resultado será preliminar e não isolará sozinho o ganho específico da cooperação entre agentes. Os critérios de pontuação estão registrados em [docs/EVALUATION_RUBRIC.md](docs/EVALUATION_RUBRIC.md), e o mapa independente de fontes em [docs/REFERENCE_MAP_PILOT.md](docs/REFERENCE_MAP_PILOT.md).
 
+## Benchmark de cinco perguntas
+
+A execução pareada multi-pergunta está documentada em [docs/FIVE_QUESTION_BENCHMARK.md](docs/FIVE_QUESTION_BENCHMARK.md). O conjunto inicial está em [benchmark/questions_v1.json](benchmark/questions_v1.json). O novo executor é aditivo e preserva o piloto original de uma pergunta.
+
 ## Status GitHub
 
 Repositório remoto privado ativo. O executor do piloto está incorporado em `main` pelo commit `687a3c597bef2851d282cc929a33bccda8883d0b`. O código RAVE usado no piloto permanece isolado na branch `benchmark-a-current-hive-budget-guard`, fixada no commit `fdd1b24e6c70c6dc076faa05b1788a9796ebf1bb`.
